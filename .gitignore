@@ -1,0 +1,14 @@
+#Ignore Visual Studio Code settings
+.vscode/
+
+#Ignore Circuit Studio intermediate files
+pcb/History/
+pcb/__Previews/
+pcb/Default Configuration/
+
+#Ignore STM32CubeIDE intermediate files
+stm32/.settings/
+stm32/Debug/
+stm32/Release/
+stm32/.mxproject
+stm32/*.launch
