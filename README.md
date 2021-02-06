@@ -24,11 +24,9 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This is like a  digital picture frame, but instead of showing a sequence of photos, it plays a movie frame by frame. Images appear on a [7-Color E-Paper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. The STM32 microcontroller reads from the SD-Card and updates the display at a rate of one frame per minute. The idea is not mine, the first time I saw something similar was on [Hackaday.io](https://hackaday.io/project/175630-slowmovie-cinema-on-a-27-epaper-display). As far as I know, nobody has made something like this with a color E-Paper display.
+This is like a  digital picture frame, but instead of showing a sequence of photos, it plays a movie frame by frame. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. The STM32 microcontroller reads from the SD-Card and updates the display at a rate of one frame per minute. The idea is not mine, the first time I saw something similar was on [Hackaday.io](https://hackaday.io/project/175630-slowmovie-cinema-on-a-27-epaper-display). As far as I know, nobody has made something like this with a color ePaper display.
 
 The plan is to make a standalone device that is battery-powered. Hardware is pretty simple, just a microcontroller, SD-Card, and the display. For the initial prototype/proof of concept, I'll be using a [STM32F4 Discovery board](https://www.st.com/en/evaluation-tools/stm32f4discovery.html) but I plan on making a PCB with all the components once the design is finalized.
-
-The real purpose of this project is not so much the end product as is the learning experience on the STM32 microcontrollers.
 
 For more info check out the [full log on hackaday.io](https://hackaday.io/project/177197-the-slowest-video-player-with-7-colors)
 
@@ -47,8 +45,8 @@ For more info check out the [full log on hackaday.io](https://hackaday.io/projec
 
 <!-- GETTING STARTED -->
 ## Circuit Diagram
-Connection diagram between E-Paper and STM32F4 Discovery
-![e-paper](images/epaper_connection.png)
+Connection diagram between ePaper, SD-Card and STM32F4 Discovery
+![SD-Card and ePaper connections](images/DiscoveryBlockDiagram.png)
 
 
 <!-- DISCLAIMER -->

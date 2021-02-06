@@ -24,6 +24,7 @@ extern volatile bool update;
 static void CMD_ParseString(const char* str);
 static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseUpdate(const char* str);
+static void CMD_ParseDisplay(const char* str);
 static int CMD_StrSpaces(const char* str);
 
 
@@ -153,6 +154,10 @@ static void CMD_ParseString(const char* str)
 	{
 		CMD_ParseUpdate(args);
 	}
+	else if(strcmp(command, "display") == 0)
+	{
+		CMD_ParseDisplay(args);
+	}
 	else if(strlen(command) > 0)
 	{
 		CMD_ParseInvalid(str);
@@ -179,6 +184,43 @@ static void CMD_ParseUpdate(const char* str)
 }
 
 
+/*
+ * Parse update command
+ * */
+static void CMD_ParseDisplay(const char* str)
+{
+	printf("Wait...\n");
+
+	if(strcmp(str, "black") == 0)
+		DISP_Clear(EPD_5IN65F_BLACK);
+	else if(strcmp(str, "white") == 0)
+		DISP_Clear(EPD_5IN65F_WHITE);
+	else if(strcmp(str, "green") == 0)
+		DISP_Clear(EPD_5IN65F_GREEN);
+	else if(strcmp(str, "blue") == 0)
+		DISP_Clear(EPD_5IN65F_BLUE);
+	else if(strcmp(str, "red") == 0)
+		DISP_Clear(EPD_5IN65F_RED);
+	else if(strcmp(str, "yellow") == 0)
+		DISP_Clear(EPD_5IN65F_YELLOW);
+	else if(strcmp(str, "orange") == 0)
+		DISP_Clear(EPD_5IN65F_ORANGE);
+	else if(strcmp(str, "clean") == 0)
+		DISP_Clear(EPD_5IN65F_CLEAN);
+	else if(strcmp(str, "stripes") == 0)
+		DISP_ShowStripes();
+	else if(strcmp(str, "lines") == 0)
+		DISP_ShowLines();
+	else if(strcmp(str, "blocks") == 0)
+		DISP_ShowBlocks();
+	else
+	{
+		printf("Invalid argument -%s-\n", str);
+		return;
+	}
+
+	printf("Done\n");
+}
 
 /*
  * Returns the number of spaces at the beginning of the string

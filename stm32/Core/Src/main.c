@@ -29,8 +29,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "EPD_5in65f.h"
 #include "cmd_parser.h"
+#include "display_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -120,16 +120,11 @@ int main(void)
 		update = false;
 		HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_SET);
 
-		//Initialize display
-		EPD_5IN65F_Init();
-		EPD_5IN65F_Clear(EPD_5IN65F_WHITE);
+		//Clear display
+		DISP_Clear(EPD_5IN65F_WHITE);
 
 		//Display test pattern
-		EPD_5IN65F_Show7Block();
-		EPD_5IN65F_Show7Block();
-
-		//Turn off display
-		EPD_5IN65F_Sleep();
+		DISP_ShowBlocks();
 
 		HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_RESET);
 	}

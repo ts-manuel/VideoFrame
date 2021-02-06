@@ -11,7 +11,10 @@
 #ifndef INC_CMD_PARSER_H_
 #define INC_CMD_PARSER_H_
 
+#include <stdint.h>
+#include <stdbool.h>
 #include "stm32f4xx_hal.h"
+#include "display_driver.h"
 
 #define _MAX_CMD_LENGTH 64	//Maximum number of characters in a command
 

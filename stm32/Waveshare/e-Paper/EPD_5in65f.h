@@ -48,6 +48,11 @@ Color Index
 #define EPD_5IN65F_WIDTH       600
 #define EPD_5IN65F_HEIGHT      448
 
+void EPD_5IN65F_SendCommand(UBYTE Reg);
+void EPD_5IN65F_SendData(UBYTE Data);
+void EPD_5IN65F_BusyHigh(void);
+void EPD_5IN65F_BusyLow(void);
+
 void EPD_5IN65F_Clear(UBYTE color);
 void EPD_5IN65F_Show7Block(void);
 void EPD_5IN65F_Sleep(void);
