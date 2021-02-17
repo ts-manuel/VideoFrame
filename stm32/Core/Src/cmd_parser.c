@@ -7,24 +7,18 @@
  ******************************************************************************
  */
 
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <ctype.h>
-
 #include "cmd_parser.h"
 
 //Extern Variables
 extern volatile bool update;
-
+extern char file_name[];
 
 //Function prototypes
 static void CMD_ParseString(const char* str);
 static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseUpdate(const char* str);
 static void CMD_ParseDisplay(const char* str);
+static void CMD_ParseLoad(const char* str);
 static int CMD_StrSpaces(const char* str);
 
 
@@ -158,6 +152,10 @@ static void CMD_ParseString(const char* str)
 	{
 		CMD_ParseDisplay(args);
 	}
+	else if(strcmp(command, "load") == 0)
+	{
+		CMD_ParseLoad(args);
+	}
 	else if(strlen(command) > 0)
 	{
 		CMD_ParseInvalid(str);
@@ -220,6 +218,17 @@ static void CMD_ParseDisplay(const char* str)
 	}
 
 	printf("Done\n");
+}
+
+
+/*
+ * Parse Load command
+ * */
+static void CMD_ParseLoad(const char* str)
+{
+	strcpy(file_name, str);
+
+	update = true;
 }
 
 /*

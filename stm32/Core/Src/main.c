@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "fatfs.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -31,6 +32,8 @@
 
 #include "cmd_parser.h"
 #include "display_driver.h"
+#include "sd_driver.h"
+#include "decoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,13 +51,17 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SD_HandleTypeDef hsd;
+
 SPI_HandleTypeDef hspi1;
 
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-volatile bool update = true;	//When set to true the display is updated
+FATFS fs;
+volatile bool update = false;		//When set to true the display is updated
+char file_name[_MAX_LFN+1] = "";
 
 /* USER CODE END PV */
 
@@ -63,6 +70,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_SDIO_SD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -79,7 +87,9 @@ static void MX_SPI1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  bool sd_ok;
+  FIL fp;
+  JPG_t jpg;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -102,6 +112,8 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_SPI1_Init();
+  MX_SDIO_SD_Init();
+  MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
 
   CMD_Init(&huart1);
@@ -119,13 +131,50 @@ int main(void)
 	{
 		update = false;
 		HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_SET);
+		printf("Updating...\n");
 
-		//Clear display
-		DISP_Clear(EPD_5IN65F_WHITE);
+		//Enable power
+		sd_ok = SD_Init();
 
-		//Display test pattern
-		DISP_ShowBlocks();
+		if(sd_ok)
+		{
+			//Initialize display and clear
+			DISP_Init();
+			DISP_Clear(EPD_5IN65F_CLEAN);
 
+			//Open file
+			if(f_open(&fp, file_name, FA_READ | FA_OPEN_EXISTING) == FR_OK)
+			{
+				//Start display update sequence
+				DISP_BeginUpdate();
+
+				//Decode image
+				if(JPG_decode(&fp, &jpg))
+				{
+					printf("ERROR: JPG decoding failed\n");
+				}
+
+				//End display update sequence
+				DISP_EndUpdate();
+
+				//Close file
+				f_close(&fp);
+				}
+			else
+			{
+				printf("ERROR: Unable to open file: %s\n", file_name);
+			}
+		}
+		else
+		{
+			printf("ERROR: Unable to initialize SD-Card\n");
+		}
+
+		//Disable power
+		SD_Sleep();
+		DISP_Sleep();
+
+		printf("Done\n");
 		HAL_GPIO_WritePin(LEDG_GPIO_Port, LEDG_Pin, GPIO_PIN_RESET);
 	}
 
@@ -184,6 +233,34 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief SDIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SDIO_SD_Init(void)
+{
+
+  /* USER CODE BEGIN SDIO_Init 0 */
+
+  /* USER CODE END SDIO_Init 0 */
+
+  /* USER CODE BEGIN SDIO_Init 1 */
+
+  /* USER CODE END SDIO_Init 1 */
+  hsd.Instance = SDIO;
+  hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
+  hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
+  hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_ENABLE;
+  hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
+  hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
+  hsd.Init.ClockDiv = 0;
+  /* USER CODE BEGIN SDIO_Init 2 */
+
+  /* USER CODE END SDIO_Init 2 */
+
 }
 
 /**
@@ -268,6 +345,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
@@ -281,6 +359,12 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(EP_RST_GPIO_Port, EP_RST_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : SDIO_DETECT_Pin */
+  GPIO_InitStruct.Pin = SDIO_DETECT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SDIO_DETECT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : EP_DC_Pin EP_CS_Pin */
   GPIO_InitStruct.Pin = EP_DC_Pin|EP_CS_Pin;
