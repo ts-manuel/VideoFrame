@@ -9,20 +9,20 @@
 
 #include "stm32f4xx_hal.h"
 
-extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart3;
 
 
 #if defined(__GNUC__)
 
 int _write(int fd, char * ptr, int len)
 {
-	HAL_UART_Transmit(&huart1, (uint8_t *) ptr, len, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart3, (uint8_t *) ptr, len, HAL_MAX_DELAY);
 	return len;
 }
 
 int _read(int file, char *ptr, int len)
 {
-	HAL_UART_Receive(&huart1, (uint8_t *) ptr, len, HAL_MAX_DELAY);
+	HAL_UART_Receive(&huart3, (uint8_t *) ptr, len, HAL_MAX_DELAY);
 	return len;
 }
 
@@ -31,7 +31,7 @@ int _read(int file, char *ptr, int len)
 
 size_t __write(int handle, const unsigned char * buffer, size_t size)
 {
-	HAL_UART_Transmit(&huart1, (uint8_t *) buffer, size, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart3, (uint8_t *) buffer, size, HAL_MAX_DELAY);
 	return size;
 }
 
@@ -39,7 +39,7 @@ size_t __write(int handle, const unsigned char * buffer, size_t size)
 
 int fputc(int ch, FILE *f)
 {
-	HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
 	return ch;
 }
 

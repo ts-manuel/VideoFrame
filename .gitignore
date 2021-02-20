@@ -12,3 +12,6 @@ stm32/Debug/
 stm32/Release/
 stm32/.mxproject
 stm32/*.launch
+
+#Ignore KiCad backups
+pcb/*-backups/
