@@ -1,3 +1,5 @@
 (fp_lib_table
   (lib (name "Connector_Card")(type "KiCad")(uri "${KIPRJMOD}/Connector_Card.pretty")(options "")(descr ""))
+  (lib (name "Footprints")(type "KiCad")(uri "${KIPRJMOD}/Footprints.pretty")(options "")(descr ""))
+  (lib (name "Connector_MicroUSB")(type "KiCad")(uri "${KIPRJMOD}/Connector_MicroUSB.pretty")(options "")(descr ""))
 )
