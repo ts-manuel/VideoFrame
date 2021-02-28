@@ -34,6 +34,7 @@
 #include "display_driver.h"
 #include "sd_driver.h"
 #include "decoder.h"
+#include "file_manager.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,6 +52,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+RTC_HandleTypeDef hrtc;
+
 SD_HandleTypeDef hsd;
 
 SPI_HandleTypeDef hspi1;
@@ -60,8 +63,9 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 
 FATFS fs;
-volatile bool update = false;		//When set to true the display is updated
+volatile bool update = true;		//When set to true the display is updated
 char file_name[_MAX_LFN+1] = "";
+char folder_name[_MAX_LFN+1] = "";
 
 /* USER CODE END PV */
 
@@ -71,13 +75,17 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
+{
+	update = true;
+}
 /* USER CODE END 0 */
 
 /**
@@ -114,6 +122,7 @@ int main(void)
   MX_SPI1_Init();
   MX_SDIO_SD_Init();
   MX_FATFS_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   CMD_Init(&huart1);
@@ -138,15 +147,34 @@ int main(void)
 
 		if(sd_ok)
 		{
-			//Initialize display and clear
-			DISP_Init();
-			DISP_Clear(EPD_5IN65F_CLEAN);
+			bool file_valid;
 
-			//Open file
-			if(f_open(&fp, file_name, FA_READ | FA_OPEN_EXISTING) == FR_OK)
+			//Check for if the file exists
+			file_valid = FMAN_CheckFile(folder_name, file_name);
+
+			if(file_valid == false)
 			{
-				//Start display update sequence
+				printf("ERROR: Unable to open file: %s/%s\n", folder_name, file_name);
+				printf("Searching for another file\n");
+
+				//Find next valid file
+				file_valid = FMAN_FindNext(folder_name, file_name);
+			}
+
+			//If the file name is valid
+			if(file_valid)
+			{
+				char f_name[(_MAX_LFN+1)*2 + 2];
+				sprintf(f_name, "%s/%s", folder_name, file_name);
+
+				//Initialize display and clear
+				DISP_Init();
+				DISP_Clear(EPD_5IN65F_CLEAN);
 				DISP_BeginUpdate();
+
+				//Open file
+				printf("Loading %s ...\n", f_name);
+				f_open(&fp, f_name, FA_READ | FA_OPEN_EXISTING);
 
 				//Decode image
 				if(JPG_decode(&fp, &jpg))
@@ -159,10 +187,13 @@ int main(void)
 
 				//Close file
 				f_close(&fp);
-				}
+
+				//Search for the next file
+				FMAN_FindNext(folder_name, file_name);
+			}
 			else
 			{
-				printf("ERROR: Unable to open file: %s\n", file_name);
+				printf("ERROR: No valid file found\n");
 			}
 		}
 		else
@@ -195,6 +226,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage 
   */
@@ -202,21 +234,17 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 180;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 8;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Activate the Over-Drive mode 
-  */
-  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }
@@ -233,6 +261,81 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+  /** Initialize RTC Only 
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+    
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date 
+  */
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Enable the WakeUp 
+  */
+  __HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&hrtc, RTC_FLAG_WUTF);
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 60, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
+
 }
 
 /**
