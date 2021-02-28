@@ -15,7 +15,7 @@ stm32/*.launch
 
 #Ignore KiCad backups
 pcb/*-backups/
-pcb/fp-info-cache/
+pcb/fp-info-cache
 pcb/*.lck
 pcb/*.bak
 pcb/*prl
