@@ -85,7 +85,7 @@ void EPD_5IN65F_BusyLow(void)// If BUSYN=1 then waiting
 function :	Initialize the e-Paper register
 parameter:
 ******************************************************************************/
-void EPD_5IN65F_Init(void)
+void EPD_5IN65F_Init(uint16_t vcom_mv)
 {
 	EPD_5IN65F_Reset();
     EPD_5IN65F_BusyHigh();
@@ -118,10 +118,12 @@ void EPD_5IN65F_Init(void)
     EPD_5IN65F_SendData(0xC0);
     EPD_5IN65F_SendCommand(0xE3);
     EPD_5IN65F_SendData(0xAA);
-	
+
 	DEV_Delay_ms(100);
     EPD_5IN65F_SendCommand(0x50);
     EPD_5IN65F_SendData(0x37);
+    EPD_5IN65F_SendCommand(0x82);		//Set Vcom
+    EPD_5IN65F_SendData(vcom_mv / 50);	//data = VCOM(mV) / 50
 }
 
 /******************************************************************************

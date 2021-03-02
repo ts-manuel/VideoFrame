@@ -57,7 +57,7 @@ void EPD_5IN65F_Clear(UBYTE color);
 void EPD_5IN65F_Show7Block(void);
 void EPD_5IN65F_Sleep(void);
 void EPD_5IN65F_Display(const UBYTE *image);
-void EPD_5IN65F_Init(void);
+void EPD_5IN65F_Init(uint16_t vcom_mv);
 void EPD_5IN65F_Display_part(const UBYTE *image, UWORD xstart, UWORD ystart, UWORD image_width, UWORD image_heigh);
 
 #endif

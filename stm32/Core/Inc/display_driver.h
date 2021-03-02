@@ -14,7 +14,8 @@
 #include <stdbool.h>
 #include "EPD_5in65f.h"
 
-#define _DITHER 1	//0 = no dither, 1 = Floyd–Steinberg
+#define _DITHER 1			//0 = no dither, 1 = Floyd–Steinberg
+#define _VCOM_MV	1050	//VCOM Voltage mV (the proper voltage for the panel is written on the flex cable)
 
 void DISP_Init(void);
 void DISP_Sleep(void);

@@ -51,7 +51,7 @@ static uint8_t FindClosestColor(RGB16_t color);
  * */
 void DISP_Init(void)
 {
-	EPD_5IN65F_Init();
+	EPD_5IN65F_Init(_VCOM_MV);
 	initilized = true;
 }
 
@@ -73,7 +73,7 @@ void DISP_BeginUpdate(void)
 
 	//Initialize the display if it is not already
 	if(!initilized)
-		EPD_5IN65F_Init();
+		EPD_5IN65F_Init(_VCOM_MV);
 
 	//Send commands (set resolution, data start)
 	EPD_5IN65F_SendCommand(0x61);
@@ -121,7 +121,7 @@ void DISP_Clear(uint8_t color)
 
 	//Initialize the display if it is not already
 	if(!initilized)
-		EPD_5IN65F_Init();
+		EPD_5IN65F_Init(_VCOM_MV);
 
 	//Send data
 	EPD_5IN65F_Clear(color);
@@ -140,7 +140,7 @@ void DISP_ShowBlocks(void)
 
 	//Initialize the display if it is not already
 	if(!initilized)
-		EPD_5IN65F_Init();
+		EPD_5IN65F_Init(_VCOM_MV);
 
 	//Send data
 	EPD_5IN65F_Show7Block();
@@ -170,7 +170,7 @@ void DISP_ShowStripes(void)
 
 	//Initialize the display if it is not already
 	if(!initilized)
-		EPD_5IN65F_Init();
+		EPD_5IN65F_Init(_VCOM_MV);
 
 	DISP_BeginUpdate();
 
@@ -202,7 +202,7 @@ void DISP_ShowLines(void)
 
 	//Initialize the display if it is not already
 	if(!initilized)
-		EPD_5IN65F_Init();
+		EPD_5IN65F_Init(_VCOM_MV);
 
 	DISP_BeginUpdate();
 
