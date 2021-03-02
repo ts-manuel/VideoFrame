@@ -12,6 +12,7 @@
 //Extern Variables
 extern volatile bool update;
 extern char file_name[];
+extern char folder_name[];
 
 //Function prototypes
 static void CMD_ParseString(const char* str);
@@ -226,9 +227,48 @@ static void CMD_ParseDisplay(const char* str)
  * */
 static void CMD_ParseLoad(const char* str)
 {
-	strcpy(file_name, str);
+	if(strlen(str) < (_MAX_LFN+1)*2 + 2)
+	{
+		bool found = false; // Found '/' or '\'
+		int i = 0, j = 0;
 
-	update = true;
+		//Copy characters to the folder name until eater '\' or '/'
+		// are found and than copy the remaining characters to the  file name
+		while(str[i] != '\0' && j < _MAX_LFN+1)
+		{
+			if(str[i] == '\\' || str[i] == '/')
+			{
+				if(found)
+				{
+					printf("ERROR: Invalid file path (nested directories not supported)\n");
+				}
+
+				found = true;
+				folder_name[j] = '\0';	//Zero terminate string
+				j = 0;
+			}
+			else
+			{
+				if(!found)
+				{
+					folder_name[j++] = str[i];
+				}
+				else
+				{
+					file_name[j++] = str[i];
+				}
+			}
+
+			i++;
+		}
+		file_name[j] = '\0';	//Zero terminate string
+
+		update = true;
+	}
+	else
+	{
+		printf("ERROR: Invalid file name (only 8.3 filename supported)\n");
+	}
 }
 
 /*
