@@ -29,7 +29,7 @@
 							<builder buildPath="${workspace_loc:/VideoFrame}/Debug" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder.543877877" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder"/>
 							<tool id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.1662442637" name="MCU GCC Assembler" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler">
 								<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel.1656762898" name="Debug level" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.debuglevel.value.g3" valueType="enumerated"/>
-								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.115497160" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
+								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths.115497160" name="Include paths (-I)" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.option.includepaths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/VideoFrame/Waveshare/Examples"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input.90218824" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.assembler.input"/>
@@ -83,11 +83,11 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Waveshare"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FATFS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry excluding="Examples|e-Paper/EPD_7in5bc.c|e-Paper/EPD_7in5b_V2.c|e-Paper/EPD_7in5b_HD.c|e-Paper/EPD_7in5.c|e-Paper/EPD_7in5_V2.c|e-Paper/EPD_7in5_HD.c|e-Paper/EPD_5in83bc.c|e-Paper/EPD_5in83b_HD.c|e-Paper/EPD_5in83.c|e-Paper/EPD_4in2bc.c|e-Paper/EPD_4in2.c|e-Paper/EPD_3in7.c|e-Paper/EPD_2in9d.c|e-Paper/EPD_2in9bc.c|e-Paper/EPD_2in9b_V2.c|e-Paper/EPD_2in9.c|e-Paper/EPD_2in7b.c|e-Paper/EPD_2in7.c|e-Paper/EPD_2in13d.c|e-Paper/EPD_2in13bc.c|e-Paper/EPD_2in13b_V3.c|e-Paper/EPD_2in13.c|e-Paper/EPD_2in13_V2.c|e-Paper/EPD_1in54c.c|e-Paper/EPD_1in54b.c|e-Paper/EPD_1in54b_V2.c|e-Paper/EPD_1in54.c|e-Paper/EPD_1in54_V2.c|e-Paper/EPD_1in02d.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Waveshare"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -136,11 +136,12 @@
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc"/>
 									<listOptionValue builtIn="false" value="../Core/Inc"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/VideoFrame/Waveshare/Config}&quot;"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32F4xx/Include"/>
 									<listOptionValue builtIn="false" value="../FATFS/Target"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy"/>
 									<listOptionValue builtIn="false" value="../Middlewares/Third_Party/FatFs/src"/>
+									<listOptionValue builtIn="false" value="../Waveshare/Config"/>
+									<listOptionValue builtIn="false" value="../Waveshare/GUI"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.839116058" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -169,11 +170,11 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Waveshare"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="FATFS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry excluding="Examples|e-Paper/EPD_7in5bc.c|e-Paper/EPD_7in5b_V2.c|e-Paper/EPD_7in5b_HD.c|e-Paper/EPD_7in5.c|e-Paper/EPD_7in5_V2.c|e-Paper/EPD_7in5_HD.c|e-Paper/EPD_5in83bc.c|e-Paper/EPD_5in83b_HD.c|e-Paper/EPD_5in83.c|e-Paper/EPD_4in2bc.c|e-Paper/EPD_4in2.c|e-Paper/EPD_3in7.c|e-Paper/EPD_2in9d.c|e-Paper/EPD_2in9bc.c|e-Paper/EPD_2in9b_V2.c|e-Paper/EPD_2in9.c|e-Paper/EPD_2in7b.c|e-Paper/EPD_2in7.c|e-Paper/EPD_2in13d.c|e-Paper/EPD_2in13bc.c|e-Paper/EPD_2in13b_V3.c|e-Paper/EPD_2in13.c|e-Paper/EPD_2in13_V2.c|e-Paper/EPD_1in54c.c|e-Paper/EPD_1in54b.c|e-Paper/EPD_1in54b_V2.c|e-Paper/EPD_1in54.c|e-Paper/EPD_1in54_V2.c|e-Paper/EPD_1in02d.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Waveshare"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

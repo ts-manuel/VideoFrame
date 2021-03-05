@@ -28,7 +28,7 @@
 #
 ******************************************************************************/
 #include "EPD_Test.h"
-#include "EPD_2IN13_V2.h"
+#include "EPD_2in13_V2.h"
 
 int EPD_2in13_V2_test(void)
 {
