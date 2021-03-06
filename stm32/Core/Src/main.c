@@ -64,6 +64,7 @@ UART_HandleTypeDef huart1;
 
 FATFS fs;
 volatile bool update = true;		//When set to true the display is updated
+volatile bool running = true;		//When set the RTC wake-up interrupt updates the display
 char file_name[_MAX_LFN+1] = "";
 char folder_name[_MAX_LFN+1] = "";
 
@@ -84,7 +85,8 @@ static void MX_RTC_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 {
-	update = true;
+	if(running)
+		update = true;
 }
 /* USER CODE END 0 */
 

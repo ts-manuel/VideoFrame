@@ -11,15 +11,18 @@
 
 //Extern Variables
 extern volatile bool update;
+extern volatile bool running;
 extern char file_name[];
 extern char folder_name[];
 
 //Function prototypes
 static void CMD_ParseString(const char* str);
 static void CMD_ParseInvalid(const char* str);
-static void CMD_ParseUpdate(const char* str);
 static void CMD_ParseDisplay(const char* str);
 static void CMD_ParseLoad(const char* str);
+static void CMD_ParseStart(const char* str);
+static void CMD_ParseStop(const char* str);
+static void CMD_ParseUpdate(const char* str);
 static int CMD_StrSpaces(const char* str);
 
 
@@ -42,12 +45,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance == uart_instance)
 	{
-		// Insert byte into circular buffer
-		buffer[rx_write_ptr] = new_char;
-		rx_write_ptr = (rx_write_ptr + 1) % _MAX_CMD_LENGTH;
+		//If character is backspace
+		if(new_char == '\b')
+		{
+			//Remove last character from buffer
+			if(rx_write_ptr != rx_read_ptr)
+			{
+				rx_write_ptr = (unsigned int)(rx_write_ptr - 1) % _MAX_CMD_LENGTH;
+			}
+		}
+		else
+		{
+			// Insert byte into circular buffer
+			buffer[rx_write_ptr] = new_char;
+			rx_write_ptr = (rx_write_ptr + 1) % _MAX_CMD_LENGTH;
 
-		// Echo character back
-		HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
+			// Echo character back
+			HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
+		}
 
 		// Receive next character
 		HAL_UART_Receive_IT(huart, (uint8_t*)&new_char, 1);
@@ -157,6 +172,14 @@ static void CMD_ParseString(const char* str)
 	{
 		CMD_ParseLoad(args);
 	}
+	else if(strcmp(command, "start") == 0)
+	{
+		CMD_ParseStart(args);
+	}
+	else if(strcmp(command, "stop") == 0)
+	{
+		CMD_ParseStop(args);
+	}
 	else if(strlen(command) > 0)
 	{
 		CMD_ParseInvalid(str);
@@ -171,15 +194,6 @@ static void CMD_ParseString(const char* str)
 static void CMD_ParseInvalid(const char* str)
 {
 	printf("Invalid command: -%s-\n", str);
-}
-
-
-/*
- * Parse update command
- * */
-static void CMD_ParseUpdate(const char* str)
-{
-	update = true;
 }
 
 
@@ -234,6 +248,8 @@ static void CMD_ParseLoad(const char* str)
 
 		//Copy characters to the folder name until eater '\' or '/'
 		// are found and than copy the remaining characters to the  file name
+		folder_name[0] = '\0';
+		file_name[0] = '\0';
 		while(str[i] != '\0' && j < _MAX_LFN+1)
 		{
 			if(str[i] == '\\' || str[i] == '/')
@@ -269,6 +285,35 @@ static void CMD_ParseLoad(const char* str)
 	{
 		printf("ERROR: Invalid file name (only 8.3 filename supported)\n");
 	}
+}
+
+
+/*
+ * Starts display update
+ * */
+static void CMD_ParseStart(const char* str)
+{
+	running = true;
+	printf("Start updating\n");
+}
+
+
+/*
+ * Stops display update
+ * */
+static void CMD_ParseStop(const char* str)
+{
+	running = false;
+	printf("Stop updating\n");
+}
+
+
+/*
+ * Forces display update cycle
+ * */
+static void CMD_ParseUpdate(const char* str)
+{
+	update = true;
 }
 
 /*
