@@ -23,7 +23,9 @@ static void CMD_ParseLoad(const char* str);
 static void CMD_ParseStart(const char* str);
 static void CMD_ParseStop(const char* str);
 static void CMD_ParseUpdate(const char* str);
-static int CMD_StrSpaces(const char* str);
+static const char* CMD_Trim(const char* str, const char* msg);
+static const char* CMD_TrimSpaces(const char* str);
+static const char* CMD_ReadColor(const char* str, uint8_t* color);
 
 
 // Serial RX buffer
@@ -32,6 +34,7 @@ static volatile char new_char;
 static volatile char buffer[_MAX_CMD_LENGTH];
 static volatile int rx_read_ptr;
 static volatile int rx_write_ptr;
+static volatile bool new_char_available = false;
 #define RX_AVAILABLE_DATA() (((unsigned int)(rx_write_ptr - rx_read_ptr)) % _MAX_CMD_LENGTH)
 #define RX_DATA(x) buffer[(rx_read_ptr + (x)) % _MAX_CMD_LENGTH]
 #define RX_REMOVE_CHARS(x) {rx_read_ptr = (rx_read_ptr + (x)) % _MAX_CMD_LENGTH;}
@@ -46,25 +49,37 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if (huart->Instance == uart_instance)
 	{
 		//If character is backspace
-		if(new_char == '\b')
+		if(new_char == 127)
 		{
 			//Remove last character from buffer
 			if(rx_write_ptr != rx_read_ptr)
 			{
 				rx_write_ptr = (unsigned int)(rx_write_ptr - 1) % _MAX_CMD_LENGTH;
+
+				//Echo character back
+				HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
 			}
 		}
-		else
+		//Enter character if buffer is not full
+		else if(RX_AVAILABLE_DATA() < _MAX_CMD_LENGTH-1)
 		{
-			// Insert byte into circular buffer
+			//Insert byte into circular buffer
 			buffer[rx_write_ptr] = new_char;
 			rx_write_ptr = (rx_write_ptr + 1) % _MAX_CMD_LENGTH;
 
-			// Echo character back
+			//Echo character back
 			HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
+
+			new_char_available = true;
+		}
+		//Ring the bell when the buffer if full
+		else
+		{
+			char bel = '\a';
+			HAL_UART_Transmit(huart, (uint8_t*)&bel, 1, 100);
 		}
 
-		// Receive next character
+		//Receive next character
 		HAL_UART_Receive_IT(huart, (uint8_t*)&new_char, 1);
 	}
 }
@@ -109,31 +124,37 @@ void CMD_TryParse(void)
 	int i = 0;
 	bool found = false;
 
-	//Search for '\n' in the receive buffer
-	while(!found && i < RX_AVAILABLE_DATA())
+	//If there is a new character from the serial port
+	if(new_char_available)
 	{
-		if(RX_DATA(i) == '\n' || RX_DATA(i) == '\r')
+		new_char_available = false;
+
+		//Search for '\n' in the receive buffer
+		while(!found && i < RX_AVAILABLE_DATA())
 		{
-			found = true;
+			if(RX_DATA(i) == '\n' || RX_DATA(i) == '\r')
+			{
+				found = true;
+			}
+
+			i++;
 		}
 
-		i++;
-	}
-
-	//If '\n' is found parse string
-	if(found)
-	{
-		//Read command string into cmd_str
-		ReadStringFromRXBuffer(cmd_str, i - 1);
-
-		//Remove '\n' '\r' characters
-		while(RX_AVAILABLE_DATA() > 0 && (RX_DATA(0) == '\n' || RX_DATA(0) == '\r'))
+		//If '\n' is found parse string
+		if(found)
 		{
-			RX_REMOVE_CHARS(1);
-		}
+			//Read command string into cmd_str
+			ReadStringFromRXBuffer(cmd_str, i - 1);
 
-		//Parse string
-		CMD_ParseString(cmd_str);
+			//Remove '\n' '\r' characters
+			while(RX_AVAILABLE_DATA() > 0 && (RX_DATA(0) == '\n' || RX_DATA(0) == '\r'))
+			{
+				RX_REMOVE_CHARS(1);
+			}
+
+			//Parse string
+			CMD_ParseString(cmd_str);
+		}
 	}
 }
 
@@ -143,44 +164,33 @@ void CMD_TryParse(void)
  * */
 static void CMD_ParseString(const char* str)
 {
-	char command[16];
 	const char* args;
 
-	//Extract command from arguments
-	int i = 0;
-	int spaces = CMD_StrSpaces(str);
-	while(str[i + spaces] != ' ' && str[i + spaces] != '\0' && i < 15)
-	{
-		command[i] = str[i + spaces];
-		i++;
-	}
-	command[i] = '\0';
-
-	args = str + spaces + i;
-	args += CMD_StrSpaces(args);
+	//Remove spaces
+	str = CMD_TrimSpaces(str);
 
 	//Try to match a command
-	if(strcmp(command, "update") == 0)
+	if((args = CMD_Trim(str, "update")))
 	{
 		CMD_ParseUpdate(args);
 	}
-	else if(strcmp(command, "display") == 0)
+	else if((args = CMD_Trim(str, "display")))
 	{
 		CMD_ParseDisplay(args);
 	}
-	else if(strcmp(command, "load") == 0)
+	else if((args = CMD_Trim(str, "load")))
 	{
 		CMD_ParseLoad(args);
 	}
-	else if(strcmp(command, "start") == 0)
+	else if((args = CMD_Trim(str, "start")))
 	{
 		CMD_ParseStart(args);
 	}
-	else if(strcmp(command, "stop") == 0)
+	else if((args = CMD_Trim(str, "stop")))
 	{
 		CMD_ParseStop(args);
 	}
-	else if(strlen(command) > 0)
+	else if(strlen(str) > 0)
 	{
 		CMD_ParseInvalid(str);
 	}
@@ -202,24 +212,25 @@ static void CMD_ParseInvalid(const char* str)
  * */
 static void CMD_ParseDisplay(const char* str)
 {
+	const char* color_name;
+
 	printf("Wait...\n");
 
-	if(strcmp(str, "black") == 0)
-		DISP_Clear(EPD_5IN65F_BLACK);
-	else if(strcmp(str, "white") == 0)
-		DISP_Clear(EPD_5IN65F_WHITE);
-	else if(strcmp(str, "green") == 0)
-		DISP_Clear(EPD_5IN65F_GREEN);
-	else if(strcmp(str, "blue") == 0)
-		DISP_Clear(EPD_5IN65F_BLUE);
-	else if(strcmp(str, "red") == 0)
-		DISP_Clear(EPD_5IN65F_RED);
-	else if(strcmp(str, "yellow") == 0)
-		DISP_Clear(EPD_5IN65F_YELLOW);
-	else if(strcmp(str, "orange") == 0)
-		DISP_Clear(EPD_5IN65F_ORANGE);
-	else if(strcmp(str, "clean") == 0)
-		DISP_Clear(EPD_5IN65F_CLEAN);
+	if((color_name = CMD_Trim(str, "grad")))
+	{
+		uint8_t color;
+
+		if(CMD_ReadColor(color_name, &color) != NULL)
+		{
+			DISP_ShowGradient(color);
+		}
+		else
+		{
+			printf("Invalid color -%s-\n", color_name);
+
+			return;
+		}
+	}
 	else if(strcmp(str, "stripes") == 0)
 		DISP_ShowStripes();
 	else if(strcmp(str, "lines") == 0)
@@ -228,8 +239,17 @@ static void CMD_ParseDisplay(const char* str)
 		DISP_ShowBlocks();
 	else
 	{
-		printf("Invalid argument -%s-\n", str);
-		return;
+		uint8_t color;
+
+		if(CMD_ReadColor(str, &color) != NULL)
+		{
+			DISP_Clear(color);
+		}
+		else
+		{
+			printf("Invalid argument -%s-\n", str);
+			return;
+		}
 	}
 
 	printf("Done\n");
@@ -316,16 +336,63 @@ static void CMD_ParseUpdate(const char* str)
 	update = true;
 }
 
+
 /*
- * Returns the number of spaces at the beginning of the string
+ * If msg appears at the beginning of the string, remove msg + following spaces
+ * and return pointer to the following part.
+ * Else return NULL
  * */
-static int CMD_StrSpaces(const char* str)
+static const char* CMD_Trim(const char* str, const char* msg)
 {
-	int i = 0;
-
-	while(str[i] != 0 && str[i] == ' '){
-		i++;
+	if(str != NULL && strstr(str, msg))
+	{
+		return CMD_TrimSpaces(str + strlen(msg));
 	}
+	else
+	{
+		return NULL;
+	}
+}
 
-	return i;
+
+/*
+ * Remove spaces from the beginning of the string
+ * */
+static const char* CMD_TrimSpaces(const char* str)
+{
+	while(*str == ' ')
+		str++;
+
+	return str;
+}
+
+
+/*
+ * Read a color name from the string
+ * */
+static const char* CMD_ReadColor(const char* str, uint8_t* color)
+{
+	const char* str1;
+
+	//Search for color
+	if((str1 = CMD_Trim(str, "black")))
+		*color = EPD_5IN65F_BLACK;
+	else if((str1 = CMD_Trim(str, "white")))
+		*color = EPD_5IN65F_WHITE;
+	else if((str1 = CMD_Trim(str, "green")))
+		*color = EPD_5IN65F_GREEN;
+	else if((str1 = CMD_Trim(str, "blue")))
+		*color = EPD_5IN65F_BLUE;
+	else if((str1 = CMD_Trim(str, "red")))
+		*color = EPD_5IN65F_RED;
+	else if((str1 = CMD_Trim(str, "yellow")))
+		*color = EPD_5IN65F_YELLOW;
+	else if((str1 = CMD_Trim(str, "orange")))
+		*color = EPD_5IN65F_ORANGE;
+	else if((str1 = CMD_Trim(str, "clean")))
+		*color = EPD_5IN65F_CLEAN;
+	else
+		return NULL;
+
+	return CMD_TrimSpaces(str1);
 }

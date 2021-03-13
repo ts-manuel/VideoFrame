@@ -28,21 +28,21 @@ typedef struct{
 } RGB16_t;
 
 #define _NUM_COLORS 7
-static const RGB16_t colors[_NUM_COLORS] = {
+static const RGB16_t colors[_NUM_COLORS+1] = {
 		{0x00, 0x00, 0x00},	//EPD_5IN65F_BLACK
 		{0xff, 0xff, 0xff},	//EPD_5IN65F_WHITE
 		{0x00, 0xff, 0x00},	//EPD_5IN65F_GREEN
 		{0x00, 0x00, 0xff},	//EPD_5IN65F_BLUE
 		{0xff, 0x00, 0x00},	//EPD_5IN65F_RED
 		{0xff, 0xff, 0x00},	//EPD_5IN65F_YELLOW
-		{0xff, 0x80, 0x00}	//EPD_5IN65F_ORANGE
-		//{0xaa, 0x6e, 0x96}	//EPD_5IN65F_CLEAN
+		{0xff, 0x80, 0x00},	//EPD_5IN65F_ORANGE
+		{0xaa, 0x6e, 0x96}	//EPD_5IN65F_CLEAN
 };
+
 
 
 static void SendStripe(void);
 static uint8_t FindClosestColor(RGB16_t color);
-
 
 
 
@@ -225,6 +225,71 @@ void DISP_ShowLines(void)
 
 
 /*
+ * Show yellow gradient from full yellow to white and from black to yellow
+ * */
+void DISP_ShowGradient(uint8_t color)
+{
+	prev_state = initilized;
+	RGB16_t cl = colors[color];
+
+	//Initialize the display if it is not already
+	if(!initilized)
+		EPD_5IN65F_Init(_VCOM_MV);
+
+	DISP_BeginUpdate();
+
+	const float r0 = (float)cl.r / 255.f;
+	const float g0 = (float)cl.g / 255.f;
+	const float b0 = (float)cl.b / 255.f;
+
+	//Send data
+	for(int y = 0; y < EPD_5IN65F_HEIGHT; y++)
+	{
+		if(y < 448/2)
+		{
+			for(int x = 0; x < EPD_5IN65F_WIDTH; x++)
+			{
+				float r1 = 1.f;
+				float g1 = 1.f;
+				float b1 = 1.f;
+				float t = (float)x / (float)(EPD_5IN65F_WIDTH-1);
+
+				uint8_t r = (uint8_t)((r0 * t + r1 * (1-t)) * 255.f);
+				uint8_t g = (uint8_t)((g0 * t + g1 * (1-t)) * 255.f);
+				uint8_t b = (uint8_t)((b0 * t + b1 * (1-t)) * 255.f);
+
+				DISP_WritePixel(x, y, r, g, b);
+			}
+		}
+		else
+		{
+			// Black to Yellow
+
+			for(int x = 0; x < EPD_5IN65F_WIDTH; x++)
+			{
+				float r1 = 0.f;
+				float g1 = 0.f;
+				float b1 = 0.f;
+				float t = 1.f - (float)x / (float)(EPD_5IN65F_WIDTH-1);
+
+				uint8_t r = (uint8_t)((r0 * t + r1 * (1-t)) * 255.f);
+				uint8_t g = (uint8_t)((g0 * t + g1 * (1-t)) * 255.f);
+				uint8_t b = (uint8_t)((b0 * t + b1 * (1-t)) * 255.f);
+
+				DISP_WritePixel(x, y, r, g, b);
+			}
+		}
+	}
+
+	DISP_EndUpdate();
+
+	//Leave the display in the same state it was found
+	if(!prev_state)
+		DISP_Sleep();
+}
+
+
+/*
  * Set the height of the stripe buffer
  * 	8 for jpeg files that doesn't use chroma subsampling
  * 	16 for jpeg files that use chroma subsampling
@@ -308,6 +373,15 @@ static void SendStripe(void)
 			quant_err.g = old_color.g - new_color.g;
 			quant_err.b = old_color.b - new_color.b;
 
+			//Clamp quantization error
+			int len = quant_err.r*quant_err.r + quant_err.g*quant_err.g + quant_err.b*quant_err.b;
+			if(len > 195075)
+			{
+				quant_err.r /= len >> 8;
+				quant_err.g /= len >> 8;
+				quant_err.b /= len >> 8;
+			}
+
 			//Write color to the display
 			if(x % 2 == 0)
 			{
@@ -333,14 +407,14 @@ static void SendStripe(void)
 
 			if(x > 0)
 			{
-				STRIPE_PIXEL_R(x-1, y+1) = (STRIPE_PIXEL_R(x-1, y+1)*16 + 5*quant_err.r) / 16;
-				STRIPE_PIXEL_G(x-1, y+1) = (STRIPE_PIXEL_G(x-1, y+1)*16 + 5*quant_err.g) / 16;
-				STRIPE_PIXEL_B(x-1, y+1) = (STRIPE_PIXEL_B(x-1, y+1)*16 + 5*quant_err.b) / 16;
+				STRIPE_PIXEL_R(x-1, y+1) = (STRIPE_PIXEL_R(x-1, y+1)*16 + 3*quant_err.r) / 16;
+				STRIPE_PIXEL_G(x-1, y+1) = (STRIPE_PIXEL_G(x-1, y+1)*16 + 3*quant_err.g) / 16;
+				STRIPE_PIXEL_B(x-1, y+1) = (STRIPE_PIXEL_B(x-1, y+1)*16 + 3*quant_err.b) / 16;
 			}
 
-			STRIPE_PIXEL_R(x, y+1) = (STRIPE_PIXEL_R(x, y+1)*16 + 3*quant_err.r) / 16;
-			STRIPE_PIXEL_G(x, y+1) = (STRIPE_PIXEL_G(x, y+1)*16 + 3*quant_err.g) / 16;
-			STRIPE_PIXEL_B(x, y+1) = (STRIPE_PIXEL_B(x, y+1)*16 + 3*quant_err.b) / 16;
+			STRIPE_PIXEL_R(x, y+1) = (STRIPE_PIXEL_R(x, y+1)*16 + 5*quant_err.r) / 16;
+			STRIPE_PIXEL_G(x, y+1) = (STRIPE_PIXEL_G(x, y+1)*16 + 5*quant_err.g) / 16;
+			STRIPE_PIXEL_B(x, y+1) = (STRIPE_PIXEL_B(x, y+1)*16 + 5*quant_err.b) / 16;
 #else	//No dithering
 			RGB16_t color;
 			uint8_t new_code;
@@ -374,14 +448,16 @@ static uint8_t FindClosestColor(RGB16_t color)
 	uint8_t index = 0;
 	int closest = 0x7fffffff;
 
+	int r0 = (int)color.r;
+	int g0 = (int)color.g;
+	int b0 = (int)color.b;
+
+	//Find closest color
 	for(int i = 0; i < _NUM_COLORS; i++)
 	{
-		int r0 = (int)colors[i].r;
-		int g0 = (int)colors[i].g;
-		int b0 = (int)colors[i].b;
-		int r1 = (int)color.r;
-		int g1 = (int)color.g;
-		int b1 = (int)color.b;
+		int r1 = (int)colors[i].r;
+		int g1 = (int)colors[i].g;
+		int b1 = (int)colors[i].b;
 
 		int dist = (r0-r1)*(r0-r1) + (g0-g1)*(g0-g1) + (b0-b1)*(b0-b1);
 

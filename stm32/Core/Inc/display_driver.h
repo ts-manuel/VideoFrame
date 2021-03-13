@@ -25,6 +25,7 @@ void DISP_Clear(uint8_t color);
 void DISP_ShowBlocks(void);
 void DISP_ShowStripes(void);
 void DISP_ShowLines(void);
+void DISP_ShowGradient(uint8_t color);
 void DISP_SetStripeHeight(int h);
 void DISP_WritePixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
 
