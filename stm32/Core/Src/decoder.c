@@ -21,6 +21,7 @@ static const uint8_t zigZagMap[] = {
 	53, 60, 61, 54, 47, 55, 62, 63
 };
 
+#if _GAMMA_CORRECT
 static const uint8_t gamma_lut[256] = {
 	     0,   0,   0,   0,  21,  24,  27,  29,  32,  34,  37,  39,  41,  43,  45,  47,
 	    48,  50,  52,  54,  55,  57,  59,  60,  62,  63,  65,  66,  68,  69,  71,  72,
@@ -39,6 +40,7 @@ static const uint8_t gamma_lut[256] = {
 	   236, 237, 237, 238, 238, 239, 240, 240, 241, 242, 242, 243, 243, 244, 245, 245,
 	   246, 247, 247, 248, 248, 249, 250, 250, 251, 251, 252, 253, 253, 254, 254, 255,
 };
+#endif
 
 // IDCT scaling factors
 const float m0 = 2.f * cosf(1.f / 16.f * 2.f * M_PI);
@@ -1163,9 +1165,11 @@ static void YCbCr_to_RGB(JPG_t* jpg)
 						if(b < 0)	b = 0;
 						if(b > 255)	b = 255;
 
+#if _GAMMA_CORRECT
 						r = gamma_lut[r];
 						g = gamma_lut[g];
 						b = gamma_lut[b];
+#endif
 
 						DISP_WritePixel(img_x, img_y, r, g, b);
 					}

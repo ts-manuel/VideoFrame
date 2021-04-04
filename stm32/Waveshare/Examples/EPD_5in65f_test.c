@@ -38,7 +38,7 @@ int EPD_5in65f_test(void)
     }
 
   printf("e-Paper Init and Clear...\r\n");
-	EPD_5IN65F_Init();
+	EPD_5IN65F_Init(1050);
 	EPD_5IN65F_Clear(EPD_5IN65F_WHITE);
   DEV_Delay_ms(100);
 				

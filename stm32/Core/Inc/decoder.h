@@ -21,7 +21,8 @@
 #include "fatfs.h"
 #include "display_driver.h"
 
-#define _DEBUG_PRINT 0	//0 = no debug output, 1 = print only header, 2 = print header and tables
+#define _DEBUG_PRINT	0	//0 = no debug output, 1 = print only header, 2 = print header and tables
+#define _GAMMA_CORRECT	0	//0 = no gamma correction, 1 = gamma correct decoded image
 
 //JPEG Markers
 #define _SOI	0xd8	//(Start Of Image) must be the first marker of the file

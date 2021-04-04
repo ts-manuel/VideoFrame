@@ -30,10 +30,10 @@
 #ifndef _EPD_TEST_H_
 #define _EPD_TEST_H_
 
-#include "DEV_Config.h"
-#include "GUI_Paint.h"
 #include "imagedata.h"
-#include "Debug.h"
+#include "../Config/DEV_Config.h"
+#include "../Config/Debug.h"
+#include "../GUI/GUI_Paint.h"
 #include <stdlib.h> // malloc() free()
 
 int EPD_1in02d_test(void);
