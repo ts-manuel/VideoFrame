@@ -68,8 +68,20 @@ void Error_Handler(void);
 #define EP_BUSY_GPIO_Port GPIOB
 #define PWR_3V3_EN_Pin GPIO_PIN_12
 #define PWR_3V3_EN_GPIO_Port GPIOB
+#define SD_D0_Pin GPIO_PIN_8
+#define SD_D0_GPIO_Port GPIOC
+#define SD_D1_Pin GPIO_PIN_9
+#define SD_D1_GPIO_Port GPIOC
 #define PWR_SD_EN_Pin GPIO_PIN_15
 #define PWR_SD_EN_GPIO_Port GPIOA
+#define SD_D2_Pin GPIO_PIN_10
+#define SD_D2_GPIO_Port GPIOC
+#define SD_D3_Pin GPIO_PIN_11
+#define SD_D3_GPIO_Port GPIOC
+#define SD_CLK_Pin GPIO_PIN_12
+#define SD_CLK_GPIO_Port GPIOC
+#define SD_CMD_Pin GPIO_PIN_2
+#define SD_CMD_GPIO_Port GPIOD
 #define SD_DET_Pin GPIO_PIN_4
 #define SD_DET_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */

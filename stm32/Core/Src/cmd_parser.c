@@ -10,8 +10,8 @@
 #include "cmd_parser.h"
 
 //Extern Variables
-extern volatile bool update;
-extern volatile bool running;
+extern bool update;
+extern bool running;
 extern char file_name[];
 extern char folder_name[];
 

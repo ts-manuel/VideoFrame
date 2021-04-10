@@ -14,10 +14,10 @@
 #include <stdbool.h>
 #include "fatfs.h"
 #include "stm32f4xx_hal.h"
+#include "power.h"
 
-#define _MAX_MOUNT_RETRY 10
 
-bool SD_Init(void);
-bool SD_Sleep(void);
+HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs);
+HAL_StatusTypeDef SD_Sleep(SD_HandleTypeDef* hsd);
 
 #endif /* INC_SD_DRIVER_H_ */

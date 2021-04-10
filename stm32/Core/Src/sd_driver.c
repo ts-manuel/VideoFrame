@@ -9,51 +9,58 @@
 
 #include "sd_driver.h"
 
-extern SD_HandleTypeDef hsd;
-extern FATFS fs;
+#define _MAX_INIT_RETRY		100
 
 
 /*
  * Initialize SD-Card
  * */
-bool SD_Init(void)
+HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs)
 {
-	int i = 0;
-
 	//Enable power
-
-	//Wait for power to stabilize
-	HAL_Delay(1);
+	PWR_Enable(PWR_SD);
 
 	//Initialize SD card
-	if(HAL_SD_Init(&hsd) != HAL_OK)
+	HAL_StatusTypeDef init_res;
+	FRESULT mnt_res;
+	int i = 0;
+
+	do
 	{
-		return false;
-	}
+		//Initialize SD
+		init_res = HAL_SD_Init(hsd);
 
-	//Mount SD card
-	while(f_mount(&fs, "", 1) != FR_OK && i < _MAX_MOUNT_RETRY)
-	{
-		i++;
-	}
+		//Mount drive
+		if(init_res == HAL_OK)
+			mnt_res = f_mount(fs, "", 1);
+		else
+			HAL_Delay(1);
 
-	if(i == _MAX_MOUNT_RETRY)
-		return false;
+	} while(++i < _MAX_INIT_RETRY && ((init_res != HAL_OK) || (mnt_res != FR_OK)));
 
-	return true;
+	if(i == _MAX_INIT_RETRY)
+		return HAL_ERROR;
+
+	//Configure card to 4bit mode
+	return HAL_SD_ConfigWideBusOperation(hsd, SDIO_BUS_WIDE_4B);
 }
+
 
 /*
  * Remove power to the SD-Card
  * */
-bool SD_Sleep(void)
+HAL_StatusTypeDef SD_Sleep(SD_HandleTypeDef* hsd)
 {
-	bool res;
-
 	//Unmount drive
-	res = f_mount(0, "", 0) == FR_OK;
+	if(f_mount(0, "", 0) != FR_OK)
+		return HAL_ERROR;
+
+	//Power off SD
+	if(HAL_SD_DeInit(hsd) != HAL_OK)
+		return HAL_ERROR;
 
 	//Remove power
+	PWR_Disable(PWR_SD);
 
-	return res;
+	return HAL_OK;
 }

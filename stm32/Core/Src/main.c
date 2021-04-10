@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "cmd_parser.h"
 #include "display_driver.h"
@@ -61,9 +62,9 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-FATFS fs;
-volatile bool update = true;		//When set to true the display is updated
-volatile bool running = true;		//When set the RTC wake-up interrupt updates the display
+/* Backup domain */
+bool update = true;					//When set to true the display is updated
+bool running = false;				//When set the RTC wake-up interrupt updates the display
 char file_name[_MAX_LFN+1] = "";
 char folder_name[_MAX_LFN+1] = "";
 
@@ -72,21 +73,17 @@ char folder_name[_MAX_LFN+1] = "";
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_SDIO_SD_Init(void);
-static void MX_USART3_UART_Init(void);
 static void MX_RTC_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_SDIO_SD_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
-{
-	if(running)
-		update = true;
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -96,9 +93,12 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  bool sd_ok;
-  FIL fp;
-  JPG_t jpg;
+	uint8_t* srmadd_fil_name = (uint8_t*)BKPSRAM_BASE;
+	uint8_t* srmadd_fol_name =  (uint8_t*)(srmadd_fil_name + sizeof(file_name));
+	uint8_t* srmadd_running = (uint8_t*)(srmadd_fol_name + sizeof(folder_name));
+	FATFS fs;
+	FIL fp;
+	JPG_t jpg;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -119,16 +119,42 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_SDIO_SD_Init();
-  MX_USART3_UART_Init();
-  MX_FATFS_Init();
   MX_RTC_Init();
   MX_SPI1_Init();
+  MX_FATFS_Init();
+  MX_SDIO_SD_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_GPIO_WritePin(PWR_3V3_EN_GPIO_Port, PWR_3V3_EN_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(PWR_SD_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_SET);
+  //Enable power
+  PWR_Enable(PWR_3V3);
+
   CMD_Init(&huart3);
+
+  //Discriminate between reset/standby and power cycle
+  if(__HAL_PWR_GET_FLAG(PWR_FLAG_SB) != RESET)
+  {
+	  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);
+	  __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+	  __HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&hrtc, RTC_FLAG_WUTF);
+
+	  //Reload variables from backup ram
+	  __HAL_RCC_BKPSRAM_CLK_ENABLE();
+	  HAL_PWR_EnableBkUpAccess();
+	  HAL_PWREx_EnableBkUpReg();
+	  memcpy(file_name, srmadd_fil_name, sizeof(file_name));
+	  memcpy(folder_name, srmadd_fol_name, sizeof(folder_name));
+	  memcpy(&running, srmadd_running, sizeof(running));
+	  __HAL_RCC_BKPSRAM_CLK_DISABLE();
+
+	  printf("Recover from reset / standby\n");
+  }
+  else
+  {
+	  printf("Power cycle\n");
+  }
+
+  HAL_Delay(100);
 
   /* USER CODE END 2 */
 
@@ -144,10 +170,7 @@ int main(void)
 		update = false;
 		printf("Updating...\n");
 
-		//Enable power
-		sd_ok = SD_Init();
-
-		if(sd_ok)
+		if(SD_Init(&hsd, &fs) == HAL_OK)
 		{
 			bool file_valid;
 
@@ -204,7 +227,7 @@ int main(void)
 		}
 
 		//Disable power
-		SD_Sleep();
+		SD_Sleep(&hsd);
 		DISP_Sleep();
 
 		printf("Done\n");
@@ -212,7 +235,32 @@ int main(void)
 
 	//Handle commands from the serial port
 	CMD_TryParse();
-	HAL_Delay(100);
+
+	//Enter standby
+	if(running)
+	{
+		//Disable power
+		PWR_Disable(PWR_3V3);
+
+		//Store state into backup ram
+		__HAL_RCC_BKPSRAM_CLK_ENABLE();
+		HAL_PWR_EnableBkUpAccess();
+		HAL_PWREx_EnableBkUpReg();
+		memcpy(srmadd_fil_name, file_name, sizeof(file_name));
+		memcpy(srmadd_fol_name, folder_name, sizeof(folder_name));
+		memcpy(srmadd_running, &running, sizeof(running));
+		__HAL_RCC_BKPSRAM_CLK_DISABLE();
+
+		__HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);
+		__HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+		__HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&hrtc, RTC_FLAG_WUTF);
+		HAL_PWR_EnterSTANDBYMode();
+	}
+	else
+	{
+		HAL_Delay(100);
+	}
+
   }
   /* USER CODE END 3 */
 }
@@ -239,9 +287,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 72;
+  RCC_OscInitStruct.PLL.PLLN = 80;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 3;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -252,8 +300,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -356,7 +404,7 @@ static void MX_SDIO_SD_Init(void)
   hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_ENABLE;
   hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
   hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-  hsd.Init.ClockDiv = 2;
+  hsd.Init.ClockDiv = 8;
   /* USER CODE BEGIN SDIO_Init 2 */
 
   /* USER CODE END SDIO_Init 2 */
@@ -386,7 +434,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -517,7 +565,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : SD_DET_Pin */
   GPIO_InitStruct.Pin = SD_DET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DET_GPIO_Port, &GPIO_InitStruct);
 
 }
