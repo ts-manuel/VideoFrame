@@ -84,7 +84,7 @@
 #ifndef __EPD_4IN2BC_H_
 #define __EPD_4IN2BC_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 // Display resolution
 #define EPD_4IN2BC_WIDTH       400

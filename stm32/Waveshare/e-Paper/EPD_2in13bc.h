@@ -83,7 +83,7 @@
 #ifndef __EPD_2IN13BC_H_
 #define __EPD_2IN13BC_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 // Display resolution
 #define EPD_2IN13BC_WIDTH       104

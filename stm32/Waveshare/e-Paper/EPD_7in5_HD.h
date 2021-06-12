@@ -31,7 +31,7 @@
 #ifndef _EPD_7IN5_HD_H_
 #define _EPD_7IN5_HD_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 // Display resolution
 #define EPD_7IN5_HD_WIDTH       880

@@ -85,7 +85,7 @@
 #ifndef __EPD_5IN83BC_H_
 #define __EPD_5IN83BC_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 // Display resolution
 #define EPD_5IN83BC_WIDTH       600

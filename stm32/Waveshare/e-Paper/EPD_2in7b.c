@@ -87,7 +87,7 @@
 #
 ******************************************************************************/
 #include "EPD_2in7b.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 static const unsigned char EPD_2IN7B_lut_vcom_dc[] = {
     0x00, 0x00,

@@ -77,7 +77,7 @@
 #
 ******************************************************************************/
 #include "EPD_2in9.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 const unsigned char EPD_2IN9_lut_full_update[] = {
     0x50, 0xAA, 0x55, 0xAA, 0x11, 0x00,

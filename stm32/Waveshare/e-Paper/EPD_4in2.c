@@ -110,7 +110,7 @@
 #
 ******************************************************************************/
 #include "EPD_4in2.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 static const unsigned char EPD_4IN2_lut_vcom0[] = {
     0x00, 0x17, 0x00, 0x00, 0x00, 0x02,

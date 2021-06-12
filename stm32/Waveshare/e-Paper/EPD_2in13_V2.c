@@ -51,7 +51,7 @@
 #
 ******************************************************************************/
 #include "EPD_2in13_V2.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 const unsigned char EPD_2IN13_V2_lut_full_update[]= {
     0x80,0x60,0x40,0x00,0x00,0x00,0x00,             //LUT0: BB:     VS 0 ~7

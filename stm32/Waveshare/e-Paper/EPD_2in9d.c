@@ -52,7 +52,7 @@
 #
 ******************************************************************************/
 #include "EPD_2in9d.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 /**
  * full screen update LUT

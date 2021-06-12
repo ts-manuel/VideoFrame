@@ -33,7 +33,7 @@
 #ifndef _EPD_7IN5B_V2_H_
 #define _EPD_7IN5B_V2_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 
 // Display resolution

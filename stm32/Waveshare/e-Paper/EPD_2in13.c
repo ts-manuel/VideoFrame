@@ -49,7 +49,7 @@
 #
 ******************************************************************************/
 #include "EPD_2in13.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 const unsigned char EPD_2IN13_lut_full_update[] = {
     0x22, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x11,

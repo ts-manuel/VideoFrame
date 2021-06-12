@@ -85,7 +85,7 @@
 #
 ******************************************************************************/
 #include "EPD_1in54.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 static const unsigned char EPD_1IN54_lut_full_update[] = {
     0x02, 0x02, 0x01, 0x11, 0x12, 0x12, 0x22, 0x22,

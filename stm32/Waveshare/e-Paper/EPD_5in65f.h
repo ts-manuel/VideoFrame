@@ -60,6 +60,8 @@ void EPD_5IN65F_Display(const UBYTE *image);
 void EPD_5IN65F_Init(uint16_t vcom_mv);
 void EPD_5IN65F_Display_part(const UBYTE *image, UWORD xstart, UWORD ystart, UWORD image_width, UWORD image_heigh);
 
+void EPD_5IN65F_LoadLUTs(void);
+
 #endif
 
 

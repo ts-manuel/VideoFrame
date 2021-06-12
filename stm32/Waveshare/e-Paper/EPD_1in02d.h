@@ -30,7 +30,7 @@
 #ifndef _EPD_1IN02_H_
 #define _EPD_1IN02_H_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 // Display resolution
 #define EPD_1IN02_WIDTH   80

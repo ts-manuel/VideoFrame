@@ -76,11 +76,11 @@ void DISP_BeginUpdate(void)
 		EPD_5IN65F_Init(_VCOM_MV);
 
 	//Send commands (set resolution, data start)
-	EPD_5IN65F_SendCommand(0x61);
+	/*EPD_5IN65F_SendCommand(0x61);
 	EPD_5IN65F_SendData(0x02);
 	EPD_5IN65F_SendData(0x58);
 	EPD_5IN65F_SendData(0x01);
-	EPD_5IN65F_SendData(0xC0);
+	EPD_5IN65F_SendData(0xC0);*/
 	EPD_5IN65F_SendCommand(0x10);
 
 	pixelCount = 0;

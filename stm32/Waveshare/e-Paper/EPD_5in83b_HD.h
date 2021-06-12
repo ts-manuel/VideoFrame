@@ -31,7 +31,7 @@
 #ifndef _EPD_5IN83B_HD_h_
 #define _EPD_5IN83B_HD_h_
 
-#include "DEV_Config.h"
+#include "../Config/DEV_Config.h"
 
 
 // Display resolution

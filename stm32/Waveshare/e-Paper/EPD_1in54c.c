@@ -79,7 +79,7 @@
 #
 ******************************************************************************/
 #include "EPD_1in54c.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 /******************************************************************************
 function :	Software reset
@@ -153,7 +153,7 @@ void EPD_1IN54C_Init(void)
     EPD_1IN54C_ReadBusy();
 
     EPD_1IN54C_SendCommand(0x00); //panel setting
-    EPD_1IN54C_SendData(0x0f); //LUT from OTP£¬160x296
+    EPD_1IN54C_SendData(0x0f); //LUT from OTPï¿½ï¿½160x296
     EPD_1IN54C_SendData(0x0d); //VCOM to 0V fast
 
     EPD_1IN54C_SendCommand(0x61); //resolution setting

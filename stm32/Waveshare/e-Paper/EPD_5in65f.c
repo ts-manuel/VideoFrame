@@ -81,6 +81,106 @@ void EPD_5IN65F_BusyLow(void)// If BUSYN=1 then waiting
     while(DEV_Digital_Read(EPD_BUSY_PIN));
 }
 
+uint8_t vcom_lut[] = {
+	 1,
+	 0b00011000,
+	 0b00000000,
+	 5,100,100,0,0,0,0,0,
+
+	 6,
+	 0b01001000,
+	 0b00000000,
+	 25,1,25,0,0,0,0,0,
+
+	 1,
+	 0b00111111,
+	 0b11111111,
+	 50,1,0,0,0,0,0,0
+};
+
+/*uint8_t black_lut[] = {
+	 4,
+	 0b01110111,
+	 0b01110111,
+	 0b01110111,
+	 0b01110111,
+	 5,100,100,0,0,0,0,0
+};*/
+
+uint8_t black_lut[] = {
+	 1,
+	 0b00000001,
+	 0b00100011,
+	 0b00000000,
+	 0b00000000,
+	 5,100,100,50,50,0,0,0
+};
+
+uint8_t white_lut[] = {
+	 1,
+	 0b00000010,
+	 0b00010011,
+	 0b00000000,
+	 0b00000000,
+	 5,100,100,50,50,0,0,0
+};
+
+uint8_t xon_lut[10] = {
+	0,
+	0b11111111,
+	0,0,0,0,0,0,0,0
+};
+
+void EPD_5IN65F_SetVCOM_LUT()
+{
+	EPD_5IN65F_SendCommand(0x20);
+	for(int i = 0; i < 220; i++){
+		if(i < sizeof(vcom_lut))
+			EPD_5IN65F_SendData(vcom_lut[i]);
+		else
+			EPD_5IN65F_SendData(0x00);
+	}
+	DEV_Delay_ms(100);
+}
+
+//Offset 0 - 7
+void EPD_5IN65F_SetCOLOR_LUT_black(uint8_t offset)
+{
+	EPD_5IN65F_SendCommand(0x21 + offset);
+	for(int i = 0; i < 260; i++){
+		if(i < sizeof(vcom_lut))
+			EPD_5IN65F_SendData(black_lut[i]);
+		else
+			EPD_5IN65F_SendData(0x00);
+	}
+	DEV_Delay_ms(100);
+}
+
+void EPD_5IN65F_SetCOLOR_LUT_white(uint8_t offset)
+{
+	EPD_5IN65F_SendCommand(0x21 + offset);
+	for(int i = 0; i < 260; i++){
+		if(i < sizeof(vcom_lut))
+			EPD_5IN65F_SendData(white_lut[i]);
+		else
+			EPD_5IN65F_SendData(0x00);
+	}
+	DEV_Delay_ms(100);
+}
+
+void EPD_5IN65F_SetXON_LUT(uint8_t* lut)
+{
+	EPD_5IN65F_SendCommand(0x29);
+	for(int i = 0; i < 20; i++){
+		for(int j = 0; j < 10; j++)
+		{
+			EPD_5IN65F_SendData(lut[j]);
+		}
+	}
+	DEV_Delay_ms(100);
+}
+
+
 /******************************************************************************
 function :	Initialize the e-Paper register
 parameter:
@@ -90,29 +190,31 @@ void EPD_5IN65F_Init(uint16_t vcom_mv)
 	EPD_5IN65F_Reset();
     EPD_5IN65F_BusyHigh();
     EPD_5IN65F_SendCommand(0x00);
-    EPD_5IN65F_SendData(0xEF);
+    //EPD_5IN65F_SendData(0xCF);	//Use internal LUTs
+    //EPD_5IN65F_SendData(0x80);
+    EPD_5IN65F_SendData(0xEF);		//Use FLASH LUTs
     EPD_5IN65F_SendData(0x08);
     EPD_5IN65F_SendCommand(0x01);
     EPD_5IN65F_SendData(0x37);
-    EPD_5IN65F_SendData(0x00);
-    EPD_5IN65F_SendData(0x23);
-    EPD_5IN65F_SendData(0x23);
+    EPD_5IN65F_SendData(0x00);	//VGH = +20V, VGL = -20V
+    EPD_5IN65F_SendData(0x23);	//VSHC_LVL = +10V
+    EPD_5IN65F_SendData(0x23);	//VSHC_LVL = -10V
     EPD_5IN65F_SendCommand(0x03);
-    EPD_5IN65F_SendData(0x00);
+    EPD_5IN65F_SendData(0x00);	//Power OFF VSH/VSL and VGH/VGL after 1 frame
     EPD_5IN65F_SendCommand(0x06);
     EPD_5IN65F_SendData(0xC7);
     EPD_5IN65F_SendData(0xC7);
     EPD_5IN65F_SendData(0x1D);
-    EPD_5IN65F_SendCommand(0x30);
-    EPD_5IN65F_SendData(0x3C);
+    EPD_5IN65F_SendCommand(0x30);	//PLL Control
+    EPD_5IN65F_SendData(0x3C);	//50Hz
     EPD_5IN65F_SendCommand(0x40);
     EPD_5IN65F_SendData(0x00);
     EPD_5IN65F_SendCommand(0x50);
     EPD_5IN65F_SendData(0x37);
     EPD_5IN65F_SendCommand(0x60);
     EPD_5IN65F_SendData(0x22);
-    EPD_5IN65F_SendCommand(0x61);
-    EPD_5IN65F_SendData(0x02);
+    EPD_5IN65F_SendCommand(0x61);	//Resolution setting
+    EPD_5IN65F_SendData(0x02);		//600x448
     EPD_5IN65F_SendData(0x58);
     EPD_5IN65F_SendData(0x01);
     EPD_5IN65F_SendData(0xC0);
@@ -124,6 +226,25 @@ void EPD_5IN65F_Init(uint16_t vcom_mv)
     EPD_5IN65F_SendData(0x37);
     EPD_5IN65F_SendCommand(0x82);		//Set Vcom
     EPD_5IN65F_SendData(vcom_mv / 50);	//data = VCOM(mV) / 50
+
+    //EPD_5IN65F_LoadLUTs();
+
+	//EPD_5IN65F_SendCommand(0x65);	//SPI Flash control
+	//EPD_5IN65F_SendData(0x01);		//bypass
+}
+
+void EPD_5IN65F_LoadLUTs(void)
+{
+	EPD_5IN65F_SetVCOM_LUT();
+	EPD_5IN65F_SetCOLOR_LUT_black(0);
+	EPD_5IN65F_SetCOLOR_LUT_white(1);
+	EPD_5IN65F_SetCOLOR_LUT_black(2);
+	EPD_5IN65F_SetCOLOR_LUT_black(3);
+	EPD_5IN65F_SetCOLOR_LUT_black(4);
+	EPD_5IN65F_SetCOLOR_LUT_black(5);
+	EPD_5IN65F_SetCOLOR_LUT_black(6);
+	EPD_5IN65F_SetCOLOR_LUT_black(7);
+	EPD_5IN65F_SetXON_LUT(xon_lut);
 }
 
 /******************************************************************************

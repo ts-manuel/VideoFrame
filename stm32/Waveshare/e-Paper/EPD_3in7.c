@@ -29,7 +29,7 @@
 #
 ******************************************************************************/
 #include "EPD_3in7.h"
-#include "Debug.h"
+#include "../Config/Debug.h"
 
 static const UBYTE lut_4Gray_GC[] =
 {
