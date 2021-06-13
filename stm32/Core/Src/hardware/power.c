@@ -37,17 +37,21 @@ void PWR_ReadBackupData(State_t* data)
 		HAL_PWR_EnableBkUpAccess();
 		HAL_PWREx_EnableBkUpReg();
 		memcpy(data, (void*)BKPSRAM_BASE, sizeof(State_t));
+		data->data_valid = checksum(data);
+		data->power_cycle = false;
 		__HAL_RCC_BKPSRAM_CLK_DISABLE();
 	  }
 	  else
 	  {
 		  //Recovering from power cycle
 
+		  data->power_cycle = true;
+
 		  //Reload data from flash
 #warning "TODO: Load data from FLASH"
 	  }
 
-	data->data_valid = checksum(data);
+
 
 	taskEXIT_CRITICAL();
 }

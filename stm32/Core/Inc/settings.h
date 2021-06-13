@@ -15,5 +15,18 @@
  * */
 #define _MINIMUM_VOLTAGE 4.0f
 
+/*
+ * Size of the serial port receive buffer,
+ * maximum number of characters in a command
+ * */
+#define _MAX_CMD_LENGTH 64
+
+/*
+ * Number of seconds from the last command after witch
+ * the micro enters low power mode
+ * */
+#define _SLEEP_TIMEOUT 10
+
+
 
 #endif /* INC_SETTINGS_H_ */

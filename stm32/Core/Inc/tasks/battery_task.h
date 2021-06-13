@@ -18,7 +18,7 @@
 #include "hardware/power.h"
 #include "cmsis_os.h"
 
-void StartBatteryTask(void *argument);
+void StartBatteryTask(void *arg);
 
 
 #endif /* INC_TASKS_BATTERY_TASK_H_ */

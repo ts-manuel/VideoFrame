@@ -33,6 +33,7 @@
 
 #include "hardware/power.h"
 #include "tasks/battery_task.h"
+#include "tasks/console_task.h"
 /*#include "cmd_parser.h"
 #include "display_driver.h"
 #include "sd_driver.h"
@@ -70,7 +71,7 @@ UART_HandleTypeDef huart3;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 1280 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
@@ -114,9 +115,19 @@ int main(void)
 
   const osThreadAttr_t batteryTask_attributes = {
     .name = "batteryTask",
+    .stack_size = 128 * 4,
+    .priority = (osPriority_t) osPriorityHigh,
+  };
+  const osThreadAttr_t consoleTask_attributes = {
+    .name = "consoleTask",
     .stack_size = 1280 * 4,
     .priority = (osPriority_t) osPriorityNormal,
   };
+  const ConsoleTaskArgs_t consoleTask_args = {
+    .huart = &huart3,
+    .state = &state,
+  };
+
 
 #if false
 	uint8_t* srmadd_fil_name = (uint8_t*)BKPSRAM_BASE;
@@ -194,7 +205,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   osThreadNew(StartBatteryTask, (void*)&state, &batteryTask_attributes);
-
+  osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -695,7 +706,7 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	//osThreadTerminate(NULL);
+  osThreadExit();	//Terminate thread execution
   /* Infinite loop */
   for(;;)
   {
