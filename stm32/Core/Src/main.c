@@ -34,6 +34,7 @@
 #include "hardware/power.h"
 #include "tasks/battery_task.h"
 #include "tasks/console_task.h"
+#include "tasks/display_task.h"
 /*#include "cmd_parser.h"
 #include "display_driver.h"
 #include "sd_driver.h"
@@ -71,10 +72,37 @@ UART_HandleTypeDef huart3;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 1280 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
+State_t state;
+
+osThreadAttr_t batteryTask_attributes = {
+  .name = "batteryTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+osThreadAttr_t consoleTask_attributes = {
+  .name = "consoleTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+ConsoleTaskArgs_t consoleTask_args = {
+  .huart = &huart3,
+  .state = &state,
+};
+
+osThreadId_t displayTaskHandle;
+osThreadAttr_t displayTask_attributes = {
+  .name = "displayTask",
+  .attr_bits = 0,
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+DisplayTaskArgs_t displayTask_args;
+
 #if false
 /* Backup domain */
 bool update = true;					//When set to true the display is updated
@@ -111,22 +139,12 @@ void StartDefaultTask(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  State_t state;
+  /*
+   * The stack frame for main is reused when osKernelStart(); i called
+   * DO NOT allocate variables in this stack frame if they are used
+   * after osKernelStart(); (for example as task arguments)
+   * */
 
-  const osThreadAttr_t batteryTask_attributes = {
-    .name = "batteryTask",
-    .stack_size = 128 * 4,
-    .priority = (osPriority_t) osPriorityHigh,
-  };
-  const osThreadAttr_t consoleTask_attributes = {
-    .name = "consoleTask",
-    .stack_size = 1280 * 4,
-    .priority = (osPriority_t) osPriorityNormal,
-  };
-  const ConsoleTaskArgs_t consoleTask_args = {
-    .huart = &huart3,
-    .state = &state,
-  };
 
 
 #if false
@@ -204,7 +222,17 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
+  //Battery task (read battery voltage every second)
   osThreadNew(StartBatteryTask, (void*)&state, &batteryTask_attributes);
+
+  //Display task (update the display when triggered)
+  displayTask_args.message_queue =  osMessageQueueNew(1, sizeof(DisplayMessage_t), NULL);
+  displayTaskHandle = osThreadNew(StartDisplayTask, (void*)&displayTask_args, &displayTask_attributes);
+
+  //Console task (process commands from the serial port)
+  consoleTask_args.displayTaskId = displayTaskHandle;
+  consoleTask_args.display_message_queue = displayTask_args.message_queue;
   osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
@@ -219,6 +247,12 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  while(1)
+  {
+	  printf("WHILE\n");
+  }
+
 #if false
   while (1)
   {

@@ -19,15 +19,15 @@
 
 typedef struct
 {
-	bool power_cycle;		//Set when the micro is first powered up
-	bool data_valid;		//Set if there is valid data in the backup ram or flash
-	float battery_voltage;	//Measured battery voltage
+	volatile bool power_cycle;		//Set when the micro is first powered up
+	volatile bool data_valid;		//Set if there is valid data in the backup ram or flash
+	volatile float battery_voltage;	//Measured battery voltage
 
 #warning "Consolidate file name and folder into one file path"
-	char file_name[_MAX_LFN+1];
-	char folder_name[_MAX_LFN+1];
+	volatile char file_name[_MAX_LFN+1];
+	volatile char folder_name[_MAX_LFN+1];
 
-	uint8_t checksum;
+	volatile uint8_t checksum;
 } State_t;
 
 typedef enum

@@ -35,8 +35,12 @@ void StartBatteryTask(void *arg)
 
 		if(data->battery_voltage < _MINIMUM_VOLTAGE)
 		{
+			PWR_Disable(PWR_3V3);
+
 			//Write state to FLASH
 			PWR_WriteBacupData(data, true);
+
+			printf("LOW BATTERY! Entering low power mode\n");
 
 			//Enter sleep mode
 			PWR_EnterStandBy();

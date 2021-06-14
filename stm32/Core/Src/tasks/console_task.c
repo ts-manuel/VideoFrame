@@ -13,12 +13,12 @@
 //Function prototypes
 static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_lpw);
 static void CMD_ParseInvalid(const char* str);
-//static void CMD_ParseDisplay(const char* str);
+static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
 //static void CMD_ParseUpdate(const char* str);
 //static void CMD_ParseLoad(const char* str);
 static const char* CMD_Trim(const char* str, const char* msg);
 static const char* CMD_TrimSpaces(const char* str);
-//static const char* CMD_ReadColor(const char* str, uint8_t* color);
+static const char* CMD_ReadColor(const char* str, uint8_t* color);
 
 
 // Serial RX buffer
@@ -177,13 +177,13 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	str = CMD_TrimSpaces(str);
 
 	//Try to match a command
-	if((str_args = CMD_Trim(str, "update")))
+	if((str_args = CMD_Trim(str, "display")))
 	{
-		//CMD_ParseUpdate(str_args);
+		CMD_ParseDisplay(str_args, args);
 	}
-	else if((str_args = CMD_Trim(str, "display")))
+	else if((str_args = CMD_Trim(str, "update")))
 	{
-		//CMD_ParseDisplay(str_args);
+		//CMD_ParseUpdate(str_args, args);
 	}
 	else if((str_args = CMD_Trim(str, "load")))
 	{
@@ -219,9 +219,10 @@ static void CMD_ParseInvalid(const char* str)
 /*
  * Parse update command
  * */
-/*static void CMD_ParseDisplay(const char* str)
+static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 {
 	const char* color_name;
+	DisplayMessage_t msg;
 
 	printf("Wait...\n");
 
@@ -231,28 +232,34 @@ static void CMD_ParseInvalid(const char* str)
 
 		if(CMD_ReadColor(color_name, &color) != NULL)
 		{
-			DISP_ShowGradient(color);
+			msg.color = color;
+			msg.action = e_DisplayGradient;
+			//DISP_ShowGradient(color);
 		}
 		else
 		{
 			printf("Invalid color -%s-\n", color_name);
-
 			return;
 		}
 	}
 	else if(strcmp(str, "stripes") == 0)
-		DISP_ShowStripes();
+		msg.action = e_DisplayStripes;
+		//DISP_ShowStripes();
 	else if(strcmp(str, "lines") == 0)
-		DISP_ShowLines();
+		msg.action = e_DisplayLines;
+		//DISP_ShowLines();
 	else if(strcmp(str, "blocks") == 0)
-		DISP_ShowBlocks();
+		msg.action = e_DisplayBlocks;
+		//DISP_ShowBlocks();
 	else
 	{
 		uint8_t color;
 
 		if(CMD_ReadColor(str, &color) != NULL)
 		{
-			DISP_Clear(color);
+			msg.color = color;
+			msg.action = e_DisplaySolid;
+			//DISP_Clear(color);
 		}
 		else
 		{
@@ -261,8 +268,13 @@ static void CMD_ParseInvalid(const char* str)
 		}
 	}
 
+	//Trigger display task
+	osMessageQueuePut(args->display_message_queue, &msg, 1, 0);
+	osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
+	osThreadYield();
+
 	printf("Done\n");
-}*/
+}
 
 
 /*
@@ -359,7 +371,7 @@ static const char* CMD_TrimSpaces(const char* str)
 /*
  * Read a color name from the string
  * */
-/*static const char* CMD_ReadColor(const char* str, uint8_t* color)
+static const char* CMD_ReadColor(const char* str, uint8_t* color)
 {
 	const char* str1;
 
@@ -384,4 +396,4 @@ static const char* CMD_TrimSpaces(const char* str)
 		return NULL;
 
 	return CMD_TrimSpaces(str1);
-}*/
+}

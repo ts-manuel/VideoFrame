@@ -17,13 +17,17 @@
 #include "stm32f4xx_hal.h"
 #include "settings.h"
 #include "hardware/power.h"
+#include "tasks/display_task.h"
 #include "cmsis_os.h"
+#include "EPD_5in65f.h"
 
 
 typedef struct
 {
 	UART_HandleTypeDef* huart;
 	State_t* state;
+	osThreadId_t displayTaskId;
+	osMessageQueueId_t display_message_queue;
 } ConsoleTaskArgs_t;
 
 
