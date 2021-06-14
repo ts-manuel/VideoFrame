@@ -16,6 +16,7 @@ static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
 //static void CMD_ParseUpdate(const char* str);
 //static void CMD_ParseLoad(const char* str);
+static void CMD_ParseTaskInfo(const char* str);
 static const char* CMD_Trim(const char* str, const char* msg);
 static const char* CMD_TrimSpaces(const char* str);
 static const char* CMD_ReadColor(const char* str, uint8_t* color);
@@ -199,6 +200,10 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 		*en_lpw = false;
 		printf("Low power timeout disabled\n");
 	}
+	else if((str_args = CMD_Trim(str, "task-info")))
+	{
+		CMD_ParseTaskInfo(str_args);
+	}
 	else if(strlen(str) > 0)
 	{
 		CMD_ParseInvalid(str);
@@ -336,6 +341,33 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 {
 	update = true;
 }*/
+
+
+/*
+ * Print info on all running tasks
+ * */
+static void CMD_ParseTaskInfo(const char* str)
+{
+	const char* state_to_str[] = {"Inactive", "Ready", "Running", "Blocked", "Terminated", "Error"};
+	osThreadId_t thread_IDs[16];
+	uint32_t thread_count;
+
+	//Get ID for all running threads
+	thread_count = osThreadEnumerate (thread_IDs, 16);
+
+	for(int i = 0; i < thread_count; i++)
+	{
+		osThreadId_t id = thread_IDs[i];
+		const char* name = osThreadGetName(id);
+		osPriority_t priority = osThreadGetPriority(id);
+		//uint32_t stack_size = osThreadGetStackSize(id);
+		uint32_t stack_space = osThreadGetStackSpace(id);
+		const char* state = state_to_str[osThreadGetState(id)];
+
+		printf("%d Thread <%s>, Priority: %d, Stack Space: %ldBytes, State: %s\n",
+				i, name, (int)priority, stack_space, state);
+	}
+}
 
 
 /*
