@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    stm32f4xx_hal_timebase_TIM.c 
+  * @file    stm32f4xx_hal_timebase_TIM.c
   * @brief   HAL time base based on the hardware TIM.
   ******************************************************************************
   * @attention

@@ -15,6 +15,7 @@ static void display_bloks(void);
 static void display_stripes(void);
 static void display_lines(void);
 static void display_gradient(uint8_t color);
+static void display_jpeg(FIL* fp);
 
 
 /*
@@ -56,7 +57,7 @@ void StartDisplayTask(void *_args)
 					display_gradient(msg.color);
 					break;
 				case e_DisplayJPEG:
-#warning "TODO: implement JPEG from SD"
+					display_jpeg(msg.fp);
 					break;
 			}
 
@@ -199,5 +200,20 @@ static void display_gradient(uint8_t color)
 				DISP_WritePixel(x, y, r, g, b);
 			}
 		}
+	}
+}
+
+
+/*
+ * Load jpeg image from SD card
+ * */
+static void display_jpeg(FIL* fp)
+{
+	JPG_t jpg;
+
+	//Decode image
+	if(JPG_decode(fp, &jpg))
+	{
+		printf("ERROR: JPG decoding failed\n");
 	}
 }

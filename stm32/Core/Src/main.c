@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "hardware/power.h"
+#include "hardware/sd.h"
 #include "tasks/battery_task.h"
 #include "tasks/console_task.h"
 #include "tasks/display_task.h"
@@ -77,6 +78,7 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 State_t state;
+FATFS fs;
 
 osThreadAttr_t batteryTask_attributes = {
   .name = "batteryTask",
@@ -86,7 +88,7 @@ osThreadAttr_t batteryTask_attributes = {
 
 osThreadAttr_t consoleTask_attributes = {
   .name = "consoleTask",
-  .stack_size = 256 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 ConsoleTaskArgs_t consoleTask_args = {
@@ -186,6 +188,7 @@ int main(void)
 
   //Enable power
   PWR_Enable(PWR_3V3);
+  HAL_Delay(100);
 
   //Backup previous state
   PWR_ReadBackupData(&state);
@@ -194,6 +197,11 @@ int main(void)
 	  printf("Power cycle\n");
   else
 	  printf("Recover from reset / standby\n");
+
+  if(SD_Init(&hsd, &fs) != HAL_OK)
+	  printf("ERROR: Unable to initialize SD card\n");
+  else
+	  printf("SD Initialized OK!\n");
 
 
   /* USER CODE END 2 */
@@ -247,12 +255,6 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-  while(1)
-  {
-	  printf("WHILE\n");
-  }
-
 #if false
   while (1)
   {
@@ -392,9 +394,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 80;
+  RCC_OscInitStruct.PLL.PLLN = 72;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 3;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -405,8 +407,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -440,7 +442,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_8B;
   hadc1.Init.ScanConvMode = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -559,7 +561,7 @@ static void MX_SDIO_SD_Init(void)
   hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_ENABLE;
   hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
   hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-  hsd.Init.ClockDiv = 8;
+  hsd.Init.ClockDiv = 10;
   /* USER CODE BEGIN SDIO_Init 2 */
 
   /* USER CODE END SDIO_Init 2 */
@@ -733,7 +735,7 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN Header_StartDefaultTask */
 /**
   * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used 
+  * @param  argument: Not used
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */

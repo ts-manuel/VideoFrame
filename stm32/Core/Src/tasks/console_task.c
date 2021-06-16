@@ -8,14 +8,14 @@
  */
 
 #include "tasks/console_task.h"
-
+#include "hardware/sd.h"
 
 //Function prototypes
 static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_lpw);
 static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
+static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args);
 //static void CMD_ParseUpdate(const char* str);
-//static void CMD_ParseLoad(const char* str);
 static void CMD_ParseTaskInfo(const char* str);
 static const char* CMD_Trim(const char* str, const char* msg);
 static const char* CMD_TrimSpaces(const char* str);
@@ -182,13 +182,13 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	{
 		CMD_ParseDisplay(str_args, args);
 	}
+	else if((str_args = CMD_Trim(str, "load")))
+	{
+		CMD_ParseLoad(str_args, args);
+	}
 	else if((str_args = CMD_Trim(str, "update")))
 	{
 		//CMD_ParseUpdate(str_args, args);
-	}
-	else if((str_args = CMD_Trim(str, "load")))
-	{
-		//CMD_ParseLoad(str_args);
 	}
 	else if((str_args = CMD_Trim(str, "start")))
 	{
@@ -239,7 +239,6 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 		{
 			msg.color = color;
 			msg.action = e_DisplayGradient;
-			//DISP_ShowGradient(color);
 		}
 		else
 		{
@@ -249,13 +248,10 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 	}
 	else if(strcmp(str, "stripes") == 0)
 		msg.action = e_DisplayStripes;
-		//DISP_ShowStripes();
 	else if(strcmp(str, "lines") == 0)
 		msg.action = e_DisplayLines;
-		//DISP_ShowLines();
 	else if(strcmp(str, "blocks") == 0)
 		msg.action = e_DisplayBlocks;
-		//DISP_ShowBlocks();
 	else
 	{
 		uint8_t color;
@@ -264,7 +260,6 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 		{
 			msg.color = color;
 			msg.action = e_DisplaySolid;
-			//DISP_Clear(color);
 		}
 		else
 		{
@@ -281,57 +276,57 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 	printf("Done\n");
 }
 
-
+extern SD_HandleTypeDef hsd;
+extern FATFS fs;
 /*
  * Parse Load command
  * */
-/*static void CMD_ParseLoad(const char* str)
+static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 {
-	if(strlen(str) < (_MAX_LFN+1)*2 + 2)
+	DisplayMessage_t msg;
+	FRESULT fres;
+	FIL file;
+
+	printf("Wait...\n");
+
+	/*if(SD_Init(&hsd, &fs) != HAL_OK)
+		printf("ERROR: Unable to initialize SD card\n");
+	else
+		printf("SD Initialized OK!\n");*/
+
+	/*if(strlen(str_args) < _MAX_LFN*2+2)
 	{
-		bool found = false; // Found '/' or '\'
-		int i = 0, j = 0;
+		if(SD_Init(&hsd, &fs) != HAL_OK)
+			printf("ERROR: Unable to initialize SD card\n");
+		else
+			printf("SD Initialized OK!\n");
 
-		//Copy characters to the folder name until eater '\' or '/'
-		// are found and than copy the remaining characters to the  file name
-		folder_name[0] = '\0';
-		file_name[0] = '\0';
-		while(str[i] != '\0' && j < _MAX_LFN+1)
+
+		if((fres = f_open(&file, str_args, FA_READ | FA_OPEN_EXISTING)) == FR_OK)
 		{
-			if(str[i] == '\\' || str[i] == '/')
-			{
-				if(found)
-				{
-					printf("ERROR: Invalid file path (nested directories not supported)\n");
-				}
+			msg.action = e_DisplayJPEG;
+			msg.fp = &file;
 
-				found = true;
-				folder_name[j] = '\0';	//Zero terminate string
-				j = 0;
-			}
-			else
-			{
-				if(!found)
-				{
-					folder_name[j++] = str[i];
-				}
-				else
-				{
-					file_name[j++] = str[i];
-				}
-			}
+			//Trigger display task
+			osMessageQueuePut(args->display_message_queue, &msg, 1, 0);
+			osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
+			osThreadYield();
 
-			i++;
+			//Close file
+			f_close(&file);
 		}
-		file_name[j] = '\0';	//Zero terminate string
+		else
+		{
+			printf("ERROR: Unable to open file, f_open returned %d\n", (int)fres);
+		}
 
-		update = true;
+		printf("Done\n");
 	}
 	else
 	{
 		printf("ERROR: Invalid file name (only 8.3 filename supported)\n");
-	}
-}*/
+	}*/
+}
 
 
 /*

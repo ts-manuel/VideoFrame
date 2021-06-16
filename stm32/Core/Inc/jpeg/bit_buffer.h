@@ -7,8 +7,8 @@
  ******************************************************************************
  */
 
-#ifndef INC_BIT_BUFFER_H_
-#define INC_BIT_BUFFER_H_
+#ifndef INC_JPEG_BIT_BUFFER_H_
+#define INC_JPEG_BIT_BUFFER_H_
 
 #include <stdint.h>
 
@@ -30,4 +30,4 @@ uint16_t BB_Peek16(BitBuffer_t* buff);
 void BB_DiscardBits(BitBuffer_t* buff, uint8_t len);
 void BB_Align(BitBuffer_t* buff);
 
-#endif /* INC_BIT_BUFFER_H_ */
+#endif /* INC_JPEG_BIT_BUFFER_H_ */

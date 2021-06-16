@@ -27,6 +27,9 @@
  * */
 #define _SLEEP_TIMEOUT 10000
 
-
+/*
+ * Number of retries for SD initialization
+ * */
+#define _MAX_INIT_RETRY 10
 
 #endif /* INC_SETTINGS_H_ */

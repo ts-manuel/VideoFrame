@@ -15,17 +15,15 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include "cmsis_os.h"
 
 
 typedef struct
 {
-	volatile bool power_cycle;		//Set when the micro is first powered up
-	volatile bool data_valid;		//Set if there is valid data in the backup ram or flash
-	volatile float battery_voltage;	//Measured battery voltage
-
-#warning "Consolidate file name and folder into one file path"
-	volatile char file_name[_MAX_LFN+1];
-	volatile char folder_name[_MAX_LFN+1];
+	volatile bool power_cycle;				//Set when the micro is first powered up
+	volatile bool data_valid;				//Set if there is valid data in the backup ram or flash
+	volatile float battery_voltage;			//Measured battery voltage
+	volatile char file_path[_MAX_LFN*2+2];	//Path to the next file to be displayed (folder/file.jpg\0)
 
 	volatile uint8_t checksum;
 } State_t;

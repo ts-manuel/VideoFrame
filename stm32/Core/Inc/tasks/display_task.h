@@ -17,6 +17,8 @@
 #include "stm32f4xx_hal.h"
 #include "cmsis_os.h"
 #include "hardware/display.h"
+#include "jpeg/decoder.h"
+#include "fatfs.h"
 
 #define _FLAG_DISPLAY_UPDATE 1
 
@@ -37,8 +39,9 @@ typedef enum
 
 typedef struct
 {
-	uint8_t color;
-	DisplayAction_e action;
+	DisplayAction_e action;	//Action to be performed
+	uint8_t color;			//Color to be displayed
+	FIL* fp;				//Jpeg file to be displayed
 } DisplayMessage_t;
 
 void StartDisplayTask(void *_args);

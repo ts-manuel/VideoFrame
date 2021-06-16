@@ -7,8 +7,8 @@
  ******************************************************************************
  */
 
-#ifndef INC_DECODER_H_
-#define INC_DECODER_H_
+#ifndef INC_JPEG_DECODER_H_
+#define INC_JPEG_DECODER_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +17,11 @@
 #include <string.h>
 #include <math.h>
 #include <stddef.h>
-#include "bit_buffer.h"
+#include "jpeg/bit_buffer.h"
 #include "fatfs.h"
-#include "display_driver.h"
+
+#warning "TODO: Remove #include \"hardware/display.h\" from jpeg/decoder.h"
+#include "hardware/display.h"
 
 #define _DEBUG_PRINT	0	//0 = no debug output, 1 = print only header, 2 = print header and tables
 #define _GAMMA_CORRECT	0	//0 = no gamma correction, 1 = gamma correct decoded image
@@ -96,46 +98,46 @@ typedef struct {
 	int Cr[64];
 	uint16_t x;
 	uint16_t y;
-} MCU_t;
+} JPG_MCU_t;
 
 #define MCU_COMP(mcu, i) ((i) == 0 ? mcu.Y : ((i) == 1 ? mcu.Cb : mcu.Cr))
 
 typedef struct {
 	uint16_t table[64];
 	bool used;
-} QTable_t;
+} JPG_QTable_t;
 
 typedef struct {
 	uint8_t symbol;
 	uint8_t length;
-} HCode_t;
+} JPG_HCode_t;
 
 typedef struct {
-	HCode_t shortLUT[1024];
-	HCode_t longLUT[1024];
+	JPG_HCode_t shortLUT[1024];
+	JPG_HCode_t longLUT[1024];
 	bool used;
-} HTable_t;
+} JPG_HTable_t;
 
 typedef struct {
-	QTable_t* qTable;
-	HTable_t* hTableDC;
-	HTable_t* hTableAC;
+	JPG_QTable_t* qTable;
+	JPG_HTable_t* hTableDC;
+	JPG_HTable_t* hTableAC;
 	bool used;
-} RGB16_t;
+} JPG_RGB16_t;
 
 typedef struct {
-	MCU_t mcu;
+	JPG_MCU_t mcu;
 	uint8_t compNum;		//Zero based current color component
 	uint16_t indx;			//Index of the next coefficient to write
 	int16_t previousDc[3];	//Previous DC coefficient
 	uint32_t blockCounter;
-} Decode_t;
+} JPG_Decode_t;
 
 typedef struct {
-	QTable_t QTables[4];
-	HTable_t HTablesDC[4];
-	HTable_t HTablesAC[4];
-	RGB16_t colorComp[3];
+	JPG_QTable_t QTables[4];
+	JPG_HTable_t HTablesDC[4];
+	JPG_HTable_t HTablesAC[4];
+	JPG_RGB16_t colorComp[3];
 
 	uint16_t heigth;
 	uint16_t width;
@@ -145,10 +147,10 @@ typedef struct {
 	uint8_t horizontalSamplingFactor;
 	uint8_t verticalSamplingFactor;
 	bool valid;
-	Decode_t decode;
+	JPG_Decode_t decode;
 } JPG_t;
 
 
 bool JPG_decode(FIL* fp, JPG_t* jpg);
 
-#endif /* INC_DECODER_H_ */
+#endif /* INC_JPEG_DECODER_H_ */

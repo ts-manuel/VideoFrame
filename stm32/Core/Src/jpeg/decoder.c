@@ -7,7 +7,7 @@
  ******************************************************************************
  */
 
-#include "decoder.h"
+#include "jpeg/decoder.h"
 
 
 static const uint8_t zigZagMap[] = {
@@ -473,7 +473,7 @@ static void ReadSOF0(FIL* fp, JPG_t* jpg)
 			return;
 		}
 
-		RGB16_t* colorComp = &jpg->colorComp[componentID - 1];
+		JPG_RGB16_t* colorComp = &jpg->colorComp[componentID - 1];
 		if (colorComp->used)
 		{
 			printf("ERROR: Duplicate color component ID\n");
@@ -563,7 +563,7 @@ static void ReadDHT(FIL* fp, JPG_t* jpg)
 			return;
 		}
 
-		HTable_t* hTable = ACTable ? &jpg->HTablesAC[tableID] : &jpg->HTablesDC[tableID];
+		JPG_HTable_t* hTable = ACTable ? &jpg->HTablesAC[tableID] : &jpg->HTablesDC[tableID];
 		hTable->used = true;
 		uint8_t symbolCounter = 0;
 		uint8_t symbolCount[16];
@@ -673,7 +673,7 @@ static void ReadSOS(FIL* fp, JPG_t* jpg)
 			return;
 		}
 
-		RGB16_t* colorComp = &jpg->colorComp[componentID - 1];
+		JPG_RGB16_t* colorComp = &jpg->colorComp[componentID - 1];
 		if (colorComp->used)
 		{
 			printf("ERROR: Duplicate colorComp component ID: %d\n", (int)componentID);
@@ -757,7 +757,7 @@ static void PrintHeader(JPG_t* jpg)
 	printf("DC Tables\n");
 	for (int i = 0; i < 4; i++)
 	{
-		HTable_t* hTable = &jpg->HTablesDC[i];
+		JPG_HTable_t* hTable = &jpg->HTablesDC[i];
 		if (hTable->used)
 		{
 			printf("Table ID: %d\n", i);
@@ -776,7 +776,7 @@ static void PrintHeader(JPG_t* jpg)
 	printf("AC Tables\n");
 	for (int i = 0; i < 4; i++)
 	{
-		HTable_t* hTable = &jpg->HTablesAC[i];
+		JPG_HTable_t* hTable = &jpg->HTablesAC[i];
 		if (hTable->used)
 		{
 			printf("Table ID: %d\n", i);
@@ -818,7 +818,7 @@ static bool decode_huffman(JPG_t* jpg, BitBuffer_t* buffer, bool terminate)
 	while((BB_Size(buffer) >= (16 + 11) || (terminate && BB_Size(buffer) > 0)) && jpg->decode.blockCounter < jpg->numMCUs){
 		//Read code
 		bool dc = (jpg->decode.indx % 64) == 0;
-		HTable_t* hTable = dc ? jpg->colorComp[jpg->decode.compNum].hTableDC : jpg->colorComp[jpg->decode.compNum].hTableAC;
+		JPG_HTable_t* hTable = dc ? jpg->colorComp[jpg->decode.compNum].hTableDC : jpg->colorComp[jpg->decode.compNum].hTableAC;
 		uint16_t data = BB_Peek16(buffer);
 
 		uint8_t code;

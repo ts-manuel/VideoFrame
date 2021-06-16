@@ -7,7 +7,7 @@
  ******************************************************************************
  */
 
-#include "bit_buffer.h"
+#include "jpeg/bit_buffer.h"
 
 /*
  * Initialize memory
