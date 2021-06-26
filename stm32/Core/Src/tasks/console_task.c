@@ -289,10 +289,10 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 
 	printf("Wait...\n");
 
-	/*if(SD_Init(&hsd, &fs) != HAL_OK)
+	if(SD_Init(&hsd, &fs) != HAL_OK)
 		printf("ERROR: Unable to initialize SD card\n");
 	else
-		printf("SD Initialized OK!\n");*/
+		printf("SD Initialized OK!\n");
 
 	/*if(strlen(str_args) < _MAX_LFN*2+2)
 	{
