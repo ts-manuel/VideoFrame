@@ -289,19 +289,15 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 
 	printf("Wait...\n");
 
-	if(SD_Init(&hsd, &fs) != HAL_OK)
-		printf("ERROR: Unable to initialize SD card\n");
-	else
-		printf("SD Initialized OK!\n");
-
-	/*if(strlen(str_args) < _MAX_LFN*2+2)
+	if(strlen(str_args) < _MAX_LFN*2+2)
 	{
+		//Initialize SD
 		if(SD_Init(&hsd, &fs) != HAL_OK)
 			printf("ERROR: Unable to initialize SD card\n");
 		else
 			printf("SD Initialized OK!\n");
 
-
+		//Open file
 		if((fres = f_open(&file, str_args, FA_READ | FA_OPEN_EXISTING)) == FR_OK)
 		{
 			msg.action = e_DisplayJPEG;
@@ -325,7 +321,7 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 	else
 	{
 		printf("ERROR: Invalid file name (only 8.3 filename supported)\n");
-	}*/
+	}
 }
 
 
@@ -359,7 +355,7 @@ static void CMD_ParseTaskInfo(const char* str)
 		uint32_t stack_space = osThreadGetStackSpace(id);
 		const char* state = state_to_str[osThreadGetState(id)];
 
-		printf("%d Thread <%s>, Priority: %d, Stack Space: %ldBytes, State: %s\n",
+		printf("%d Thread <%s>, Priority: %d, Stack Space: %ldWords, State: %s\n",
 				i, name, (int)priority, stack_space, state);
 	}
 }

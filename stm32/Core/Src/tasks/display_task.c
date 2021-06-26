@@ -211,6 +211,8 @@ static void display_jpeg(FIL* fp)
 {
 	JPG_t jpg;
 
+	printf("Decoding JPG\n");
+
 	//Decode image
 	if(JPG_decode(fp, &jpg))
 	{

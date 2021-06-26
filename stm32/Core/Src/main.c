@@ -17,6 +17,7 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
@@ -75,8 +76,8 @@ UART_HandleTypeDef huart3;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
 State_t state;
@@ -102,7 +103,7 @@ osThreadId_t displayTaskHandle;
 osThreadAttr_t displayTask_attributes = {
   .name = "displayTask",
   .attr_bits = 0,
-  .stack_size = 512 * 4,
+  .stack_size = 10000 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 DisplayTaskArgs_t displayTask_args;
@@ -134,10 +135,7 @@ void StartDefaultTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void DMA_Callback(void)
-{
-	printf("DMA Complete\n");
-}
+
 /* USER CODE END 0 */
 
 /**
@@ -205,10 +203,10 @@ int main(void)
   else
 	  printf("Recover from reset / standby\n");
 
-  if(SD_Init(&hsd, &fs) != HAL_OK)
+  /*if(SD_Init(&hsd, &fs) != HAL_OK)
 	  printf("ERROR: Unable to initialize SD card\n");
   else
-	  printf("SD Initialized OK!\n");
+	  printf("SD Initialized OK!\n");*/
 
 
   /* USER CODE END 2 */
@@ -251,10 +249,6 @@ int main(void)
   osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -392,8 +386,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -408,14 +401,14 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB buses clocks
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -449,7 +442,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
   hadc1.Init.Resolution = ADC_RESOLUTION_8B;
   hadc1.Init.ScanConvMode = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -537,7 +530,7 @@ static void MX_RTC_Init(void)
   }
   /** Enable the WakeUp
   */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 1440, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 60, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
   {
     Error_Handler();
   }
@@ -570,8 +563,7 @@ static void MX_SDIO_SD_Init(void)
   hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
   hsd.Init.ClockDiv = 10;
   /* USER CODE BEGIN SDIO_Init 2 */
-  //HAL_DMA_RegisterCallback(&hdma_sdio, HAL_DMA_XFER_CPLT_CB_ID, BSP_SD_ReadCpltCallback);
-  //HAL_DMA_RegisterCallback(&hdma_sdio, HAL_DMA_XFER_CPLT_CB_ID, DMA_Callback);
+
   /* USER CODE END SDIO_Init 2 */
 
 }
@@ -691,9 +683,6 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(PWR_SD_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LDR_SIG_Pin|LDR_GND_Pin, GPIO_PIN_SET);
-
   /*Configure GPIO pins : PC13 PC0 PC1 PC2
                            PC3 PC6 PC7 */
   GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2
@@ -719,8 +708,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EP_RST_Pin PWR_3V3_EN_Pin LDR_SIG_Pin LDR_GND_Pin */
-  GPIO_InitStruct.Pin = EP_RST_Pin|PWR_3V3_EN_Pin|LDR_SIG_Pin|LDR_GND_Pin;
+  /*Configure GPIO pins : EP_RST_Pin PWR_3V3_EN_Pin */
+  GPIO_InitStruct.Pin = EP_RST_Pin|PWR_3V3_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -733,9 +722,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(EP_BUSY_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB2 PB13 PB14 PB15
-                           PB5 PB6 PB7 */
+                           PB5 PB6 PB7 PB8
+                           PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8
+                          |GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

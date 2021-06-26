@@ -112,11 +112,11 @@ void PWR_Disable(Device_e dev)
 	switch(dev)
 	{
 		case PWR_3V3:
-			HAL_GPIO_WritePin(PWR_3V3_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PWR_3V3_EN_GPIO_Port, PWR_3V3_EN_Pin, GPIO_PIN_RESET);
 			break;
 
 		case PWR_SD:
-			HAL_GPIO_WritePin(PWR_3V3_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(PWR_SD_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
 			break;
 	}
 }

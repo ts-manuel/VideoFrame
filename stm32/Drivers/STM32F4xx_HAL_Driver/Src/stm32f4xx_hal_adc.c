@@ -3,7 +3,7 @@
   * @file    stm32f4xx_hal_adc.c
   * @author  MCD Application Team
   * @brief   This file provides firmware functions to manage the following 
-  *          functionalities of the Analog to Digital Converter (ADC) peripheral:
+  *          functionalities of the Analog to Digital Convertor (ADC) peripheral:
   *           + Initialization and de-initialization functions
   *           + IO operation functions
   *           + State and errors functions
@@ -814,14 +814,6 @@ HAL_StatusTypeDef HAL_ADC_Start(ADC_HandleTypeDef* hadc)
       }
     }
   }
-  else
-  {
-    /* Update ADC state machine to error */
-    SET_BIT(hadc->State, HAL_ADC_STATE_ERROR_INTERNAL);
-
-    /* Set ADC error code to ADC IP internal error */
-    SET_BIT(hadc->ErrorCode, HAL_ADC_ERROR_INTERNAL);
-  }
   
   /* Return function status */
   return HAL_OK;
@@ -913,17 +905,13 @@ HAL_StatusTypeDef HAL_ADC_PollForConversion(ADC_HandleTypeDef* hadc, uint32_t Ti
     {
       if((Timeout == 0U) || ((HAL_GetTick() - tickstart ) > Timeout))
       {
-        /* New check to avoid false timeout detection in case of preemption */
-        if(!(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC)))
-        {
-          /* Update ADC state machine to timeout */
-          SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
-          
-          /* Process unlocked */
-          __HAL_UNLOCK(hadc);
-          
-          return HAL_TIMEOUT;
-        }
+        /* Update ADC state machine to timeout */
+        SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
+        
+        /* Process unlocked */
+        __HAL_UNLOCK(hadc);
+        
+        return HAL_TIMEOUT;
       }
     }
   }
@@ -988,17 +976,13 @@ HAL_StatusTypeDef HAL_ADC_PollForEvent(ADC_HandleTypeDef* hadc, uint32_t EventTy
     {
       if((Timeout == 0U) || ((HAL_GetTick() - tickstart ) > Timeout))
       {
-        /* New check to avoid false timeout detection in case of preemption */
-        if(!(__HAL_ADC_GET_FLAG(hadc,EventType)))
-        {
-          /* Update ADC state machine to timeout */
-          SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
-          
-          /* Process unlocked */
-          __HAL_UNLOCK(hadc);
-          
-          return HAL_TIMEOUT;
-        }
+        /* Update ADC state machine to timeout */
+        SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
+        
+        /* Process unlocked */
+        __HAL_UNLOCK(hadc);
+        
+        return HAL_TIMEOUT;
       }
     }
   }
@@ -1137,14 +1121,6 @@ HAL_StatusTypeDef HAL_ADC_Start_IT(ADC_HandleTypeDef* hadc)
           hadc->Instance->CR2 |= (uint32_t)ADC_CR2_SWSTART;
       }
     }
-  }
-  else
-  {
-    /* Update ADC state machine to error */
-    SET_BIT(hadc->State, HAL_ADC_STATE_ERROR_INTERNAL);
-
-    /* Set ADC error code to ADC IP internal error */
-    SET_BIT(hadc->ErrorCode, HAL_ADC_ERROR_INTERNAL);
   }
   
   /* Return function status */
@@ -1388,13 +1364,6 @@ HAL_StatusTypeDef HAL_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* pData, ui
     }
   }
   
-  /* Check ADC DMA Mode                                                     */
-  /* - disable the DMA Mode if it is already enabled                        */
-  if((hadc->Instance->CR2 & ADC_CR2_DMA) == ADC_CR2_DMA)
-  {
-    CLEAR_BIT(hadc->Instance->CR2, ADC_CR2_DMA);
-  }
-  
   /* Start conversion if ADC is effectively enabled */
   if(HAL_IS_BIT_SET(hadc->Instance->CR2, ADC_CR2_ADON))
   {
@@ -1488,14 +1457,6 @@ HAL_StatusTypeDef HAL_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* pData, ui
       }
     }
   }
-  else
-  {
-    /* Update ADC state machine to error */
-    SET_BIT(hadc->State, HAL_ADC_STATE_ERROR_INTERNAL);
-
-    /* Set ADC error code to ADC IP internal error */
-    SET_BIT(hadc->ErrorCode, HAL_ADC_ERROR_INTERNAL);
-  }
   
   /* Return function status */
   return HAL_OK;
@@ -1529,17 +1490,7 @@ HAL_StatusTypeDef HAL_ADC_Stop_DMA(ADC_HandleTypeDef* hadc)
     
     /* Disable the DMA channel (in case of DMA in circular mode or stop while */
     /* DMA transfer is on going)                                              */
-    if (hadc->DMA_Handle->State == HAL_DMA_STATE_BUSY)
-    {
-      tmp_hal_status = HAL_DMA_Abort(hadc->DMA_Handle);
-      
-      /* Check if DMA channel effectively disabled */
-      if (tmp_hal_status != HAL_OK)
-      {
-        /* Update ADC state machine to error */
-        SET_BIT(hadc->State, HAL_ADC_STATE_ERROR_DMA);
-      }
-    }
+    tmp_hal_status = HAL_DMA_Abort(hadc->DMA_Handle);
     
     /* Disable ADC overrun interrupt */
     __HAL_ADC_DISABLE_IT(hadc, ADC_IT_OVR);

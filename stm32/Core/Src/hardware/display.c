@@ -139,6 +139,7 @@ void DISP_WritePixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 	STRIPE_PIXEL_R(x, y % stripeHeight) = (int16_t)r;
 	STRIPE_PIXEL_G(x, y % stripeHeight) = (int16_t)g;
 	STRIPE_PIXEL_B(x, y % stripeHeight) = (int16_t)b;
+
 	stripeCounter++;
 
 	//Send pixels to the display when the stripe is completed
