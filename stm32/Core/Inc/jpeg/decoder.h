@@ -148,6 +148,10 @@ typedef struct {
 	uint8_t verticalSamplingFactor;
 	bool valid;
 	JPG_Decode_t decode;
+
+	uint8_t buff[512];
+	UINT ptr;
+	UINT size;
 } JPG_t;
 
 

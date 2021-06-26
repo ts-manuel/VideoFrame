@@ -58,8 +58,9 @@ const float s5 = cosf(5.f / 16.f * M_PI) / 2.f;
 const float s6 = cosf(6.f / 16.f * M_PI) / 2.f;
 const float s7 = cosf(7.f / 16.f * M_PI) / 2.f;
 
-static uint8_t read_byte(FIL* fp);
-static uint16_t read_uint(FIL* fp);
+static uint8_t read_byte(JPG_t* jpg, FIL* fp);
+static uint16_t read_uint(JPG_t* jpg, FIL* fp);
+static bool eof(JPG_t* jpg);
 static void init_jpg(JPG_t* jpg);
 static void ReadAPPn(FIL* fp, JPG_t* jpg);
 static void ReadDQT(FIL* fp, JPG_t* jpg);
@@ -88,8 +89,8 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 	init_jpg(jpg);
 
 	//Check SOI Marker
-	byte0 = read_byte(fp);
-	byte1 = read_byte(fp);
+	byte0 = read_byte(jpg, fp);
+	byte1 = read_byte(jpg, fp);
 	if(byte0 != 0xff || byte1 != 0xd8)
 	{
 		jpg->valid = false;
@@ -101,8 +102,8 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 	do
 	{
 		//Read next tow bytes
-		byte0 = read_byte(fp);
-		byte1 = read_byte(fp);
+		byte0 = read_byte(jpg, fp);
+		byte1 = read_byte(jpg, fp);
 
 		//Exit with error if the end of file is reached before the End Of Image Marker
 		if (f_eof(fp)) {
@@ -162,7 +163,7 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 		//Any number of 0xff in a row is allowed and should be ignored
 		else if (byte1 == 0xff)
 		{
-			byte1 = read_byte(fp);
+			byte1 = read_byte(jpg, fp);
 			continue;
 		}
 		else if (byte1 == _SOI)
@@ -202,7 +203,7 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 	if(jpg->valid)
 	{
 		BitBuffer_t buffer;
-		byte1 = read_byte(fp);
+		byte1 = read_byte(jpg, fp);
 
 		//Initialize huffman data buffer
 		BB_Init(&buffer);
@@ -212,7 +213,7 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 		//Read compressed image data
 		while (jpg->valid)
 		{
-			if (f_eof(fp))
+			if (/*f_eof(fp)*/eof(jpg))
 			{
 				printf("ERROR: File ended prematurely");
 				jpg->valid = false;
@@ -220,7 +221,7 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 			}
 
 			byte0 = byte1;
-			byte1 = read_byte(fp);
+			byte1 = read_byte(jpg, fp);
 
 			//If a marker is found
 			if (byte0 == 0xff)
@@ -229,12 +230,12 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 				if (byte1 == 0x00)
 				{
 					BB_PushByte(&buffer, byte0);
-					byte1 = read_byte(fp);
+					byte1 = read_byte(jpg, fp);
 				}
 				//Restart marker
 				else if (byte1 >= _RST0 && byte1 <= _RST7)
 				{
-					byte1 = read_byte(fp);
+					byte1 = read_byte(jpg, fp);
 				}
 				//Ignore multiple0xff's in a row
 				else if (byte1 == 0xff)
@@ -278,27 +279,31 @@ bool JPG_decode(FIL* fp, JPG_t* jpg)
 /*
  * Read one byte from the file
  * */
-static uint8_t read_byte(FIL* fp)
+static uint8_t read_byte(JPG_t* jpg, FIL* fp)
 {
-	uint8_t buff[1];
-	UINT br;
+	if(jpg->ptr >= 512)
+	{
+		f_read(fp, (void*)jpg->buff, 512, jpg->size);
+		jpg->ptr = 0;
+	}
 
-	f_read(fp, (void*)buff, 1, &br);
-
-	return buff[0];
+	return jpg->buff[jpg->ptr++];
 }
 
 /*
  * Read two bytes from the file
  * */
-static uint16_t read_uint(FIL* fp)
+static uint16_t read_uint(JPG_t* jpg, FIL* fp)
 {
-	uint8_t buff[2];
-	UINT br;
+	return ((uint16_t)read_byte(jpg, fp) << 8) + (uint16_t)read_byte(jpg, fp);
+}
 
-	f_read(fp, (void*)buff, 2, &br);
-
-	return ((uint16_t)buff[0] << 8) + (uint16_t)buff[1];
+/*
+ * Return true if the end of the file is reached
+ * */
+static bool eof(JPG_t* jpg)
+{
+	return jpg->ptr > jpg->size;
 }
 
 /*
@@ -329,6 +334,8 @@ static void init_jpg(JPG_t* jpg)
 	jpg->decode.mcu.x = 0;
 	jpg->decode.mcu.y = 0;
 	jpg->decode.blockCounter = 0;
+
+	jpg->ptr = 512;
 }
 
 /*
@@ -336,12 +343,12 @@ static void init_jpg(JPG_t* jpg)
 */
 static void ReadAPPn(FIL* fp, JPG_t* jpg)
 {
-	uint16_t length = read_uint(fp);
+	uint16_t length = read_uint(jpg, fp);
 
 	//Discard data
 	for (int i = 0; i < length - 2; i++)
 	{
-		read_byte(fp);
+		read_byte(jpg, fp);
 	}
 
 #if (_DEBUG_PRINT > 1)
@@ -354,12 +361,12 @@ static void ReadAPPn(FIL* fp, JPG_t* jpg)
 */
 static void ReadComment(FIL* fp, JPG_t* jpg)
 {
-	uint16_t length = read_uint(fp);
+	uint16_t length = read_uint(jpg, fp);
 
 	//Discard data
 	for (int i = 0; i < length - 2; i++)
 	{
-		read_byte(fp);
+		read_byte(jpg, fp);
 	}
 
 #if (_DEBUG_PRINT > 1)
@@ -372,7 +379,7 @@ static void ReadComment(FIL* fp, JPG_t* jpg)
 */
 static void ReadDQT(FIL* fp, JPG_t* jpg)
 {
-	int length = read_uint(fp) - 2;
+	int length = read_uint(jpg, fp) - 2;
 #if (_DEBUG_PRINT > 1)
 	printf("Reading DQT Marker\n");
 #endif
@@ -380,7 +387,7 @@ static void ReadDQT(FIL* fp, JPG_t* jpg)
 	//Read all the tables
 	while (length > 0)
 	{
-		uint8_t tableInfo =  read_byte(fp);
+		uint8_t tableInfo =  read_byte(jpg, fp);
 		uint8_t tableID = tableInfo & 0x0f;
 		length -= 1;
 
@@ -397,7 +404,7 @@ static void ReadDQT(FIL* fp, JPG_t* jpg)
 			//16 bit data
 			for (int i = 0; i < 64; i++)
 			{
-				jpg->QTables[tableID].table[zigZagMap[i]] = read_uint(fp);
+				jpg->QTables[tableID].table[zigZagMap[i]] = read_uint(jpg, fp);
 			}
 			length -= 128;
 		}
@@ -406,7 +413,7 @@ static void ReadDQT(FIL* fp, JPG_t* jpg)
 			//8 bit data
 			for (int i = 0; i < 64; i++)
 			{
-				jpg->QTables[tableID].table[zigZagMap[i]] = (uint16_t)read_byte(fp);
+				jpg->QTables[tableID].table[zigZagMap[i]] = (uint16_t)read_byte(jpg, fp);
 			}
 			length -= 64;
 		}
@@ -427,12 +434,12 @@ static void ReadDQT(FIL* fp, JPG_t* jpg)
 */
 static void ReadSOF0(FIL* fp, JPG_t* jpg)
 {
-	uint16_t length = read_uint(fp) - 2;
+	uint16_t length = read_uint(jpg, fp) - 2;
 #if (_DEBUG_PRINT > 1)
 	printf("Reading SOF Marker\n");
 #endif
 	//Precision must be 8
-	uint8_t precision = read_byte(fp);
+	uint8_t precision = read_byte(jpg, fp);
 	if (precision != 8)
 	{
 		printf("ERROR: Invalid precision\n");
@@ -441,10 +448,10 @@ static void ReadSOF0(FIL* fp, JPG_t* jpg)
 	}
 
 	//Read frame info
-	jpg->heigth = read_uint(fp);
-	jpg->width = read_uint(fp);
+	jpg->heigth = read_uint(jpg, fp);
+	jpg->width = read_uint(jpg, fp);
 
-	jpg->numComp = read_byte(fp);
+	jpg->numComp = read_byte(jpg, fp);
 	if (jpg->numComp == 4)
 	{
 		printf("ERROR: CMYK color mode not supported\n");
@@ -455,9 +462,9 @@ static void ReadSOF0(FIL* fp, JPG_t* jpg)
 	//Read components
 	for (int i = 0; i < jpg->numComp; i++)
 	{
-		uint8_t componentID = read_byte(fp);
-		uint8_t samplingFactor = read_byte(fp);
-		uint8_t QTableID = read_byte(fp);
+		uint8_t componentID = read_byte(jpg, fp);
+		uint8_t samplingFactor = read_byte(jpg, fp);
+		uint8_t QTableID = read_byte(jpg, fp);
 
 		//Component IDs are usually 1,2,3 but rarely can be seen as 0, 1, 2
 		if (componentID == 4 || componentID == 5)
@@ -527,11 +534,11 @@ static void ReadSOF0(FIL* fp, JPG_t* jpg)
 */
 static void ReadDRI(FIL* fp, JPG_t* jpg)
 {
-	uint16_t length = read_uint(fp) - 2;
+	uint16_t length = read_uint(jpg, fp) - 2;
 #if (_DEBUG_PRINT > 1)
 	printf("Reading DRI Marker\n");
 #endif
-	jpg->restartInterval = read_uint(fp);
+	jpg->restartInterval = read_uint(jpg, fp);
 
 	if (length != 2)
 	{
@@ -546,13 +553,13 @@ static void ReadDRI(FIL* fp, JPG_t* jpg)
 */
 static void ReadDHT(FIL* fp, JPG_t* jpg)
 {
-	int length = read_uint(fp) - 2;
+	int length = read_uint(jpg, fp) - 2;
 #if (_DEBUG_PRINT > 1)
 	printf("Reading DHT Marker\n");
 #endif
 	while (length > 0)
 	{
-		uint8_t tableInfo = read_byte(fp);
+		uint8_t tableInfo = read_byte(jpg, fp);
 		uint8_t tableID = tableInfo & 0x0f;
 		bool ACTable = tableInfo >> 4;
 
@@ -571,7 +578,7 @@ static void ReadDHT(FIL* fp, JPG_t* jpg)
 		//Read code lengths
 		for (int i = 0; i < 16; i++)
 		{
-			symbolCount[i] = read_byte(fp);
+			symbolCount[i] = read_byte(jpg, fp);
 			symbolCounter += symbolCount[i];
 		}
 		if (symbolCounter > 162)
@@ -589,7 +596,7 @@ static void ReadDHT(FIL* fp, JPG_t* jpg)
 			for(int j = 0; j < symbolCount[i]; j++)
 			{
 				//Read symbol
-				uint8_t symbol = read_byte(fp);
+				uint8_t symbol = read_byte(jpg, fp);
 
 				//Fill lookup table
 				if ((code << (15-i)) >= 0xfc00)
@@ -645,7 +652,7 @@ static void ReadDHT(FIL* fp, JPG_t* jpg)
 */
 static void ReadSOS(FIL* fp, JPG_t* jpg)
 {
-	uint16_t length = read_uint(fp) - 2;
+	uint16_t length = read_uint(jpg, fp) - 2;
 #if (_DEBUG_PRINT > 1)
 	printf("Reading SOS Marker\n");
 #endif
@@ -662,10 +669,10 @@ static void ReadSOS(FIL* fp, JPG_t* jpg)
 		jpg->colorComp[i].used = false;
 	}
 
-	uint8_t numComp = read_byte(fp);	//Must be the same in the SOF marker
+	uint8_t numComp = read_byte(jpg, fp);	//Must be the same in the SOF marker
 	for (int i = 0; i < numComp; i++)
 	{
-		uint8_t componentID = read_byte(fp);
+		uint8_t componentID = read_byte(jpg, fp);
 		if (componentID > jpg->numComp)
 		{
 			printf("EROR: Invalid component ID: %d\n", (int)componentID);
@@ -683,7 +690,7 @@ static void ReadSOS(FIL* fp, JPG_t* jpg)
 		colorComp->used = true;
 
 		//Read Huffman Table IDs
-		uint8_t hTableIDs = read_byte(fp);
+		uint8_t hTableIDs = read_byte(jpg, fp);
 		uint8_t HTableDCID = hTableIDs >> 4;
 		uint8_t HTableACID = hTableIDs & 0x0f;
 		if (HTableDCID > 3 || HTableACID > 3)
@@ -697,9 +704,9 @@ static void ReadSOS(FIL* fp, JPG_t* jpg)
 	}
 
 	//Read block info
-	uint8_t startOfSelection = read_byte(fp);
-	uint8_t endOfSelection = read_byte(fp);
-	uint8_t sucessiveAproximation = read_byte(fp);
+	uint8_t startOfSelection = read_byte(jpg, fp);
+	uint8_t endOfSelection = read_byte(jpg, fp);
+	uint8_t sucessiveAproximation = read_byte(jpg, fp);
 	//Baseline JPGs don't use special selection or successive approximation
 	if (startOfSelection != 0 || endOfSelection != 63)
 	{
