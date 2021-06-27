@@ -37,12 +37,6 @@
 #include "tasks/battery_task.h"
 #include "tasks/console_task.h"
 #include "tasks/display_task.h"
-/*#include "cmd_parser.h"
-#include "display_driver.h"
-#include "sd_driver.h"
-#include "decoder.h"
-#include "file_manager.h"
-#include "light_sensor.h"*/
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -72,49 +66,34 @@ SPI_HandleTypeDef hspi1;
 
 UART_HandleTypeDef huart3;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for consoleTask */
+osThreadId_t consoleTaskHandle;
+const osThreadAttr_t consoleTask_attributes = {
+  .name = "consoleTask",
   .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 1024 * 4
+};
+/* Definitions for batteryTask */
+osThreadId_t batteryTaskHandle;
+const osThreadAttr_t batteryTask_attributes = {
+  .name = "batteryTask",
+  .priority = (osPriority_t) osPriorityHigh,
   .stack_size = 128 * 4
 };
+/* Definitions for displayTask */
+osThreadId_t displayTaskHandle;
+const osThreadAttr_t displayTask_attributes = {
+  .name = "displayTask",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 10000 * 4
+};
 /* USER CODE BEGIN PV */
+
 State_t state;
 FATFS fs;
 
-osThreadAttr_t batteryTask_attributes = {
-  .name = "batteryTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
-
-osThreadAttr_t consoleTask_attributes = {
-  .name = "consoleTask",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-ConsoleTaskArgs_t consoleTask_args = {
-  .huart = &huart3,
-  .state = &state,
-};
-
-osThreadId_t displayTaskHandle;
-osThreadAttr_t displayTask_attributes = {
-  .name = "displayTask",
-  .attr_bits = 0,
-  .stack_size = 10000 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
-};
+ConsoleTaskArgs_t consoleTask_args;
 DisplayTaskArgs_t displayTask_args;
-
-#if false
-/* Backup domain */
-bool update = true;					//When set to true the display is updated
-bool running = true;				//When set the RTC wake-up interrupt updates the display
-char file_name[_MAX_LFN+1] = "";
-char folder_name[_MAX_LFN+1] = "";
-#endif
 
 /* USER CODE END PV */
 
@@ -127,7 +106,9 @@ static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_ADC1_Init(void);
-void StartDefaultTask(void *argument);
+void StartConsoleTask(void *argument);
+extern void StartBatteryTask(void *argument);
+extern void StartDisplayTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -151,17 +132,6 @@ int main(void)
    * after osKernelStart(); (for example as task arguments)
    * */
 
-
-
-#if false
-	uint8_t* srmadd_fil_name = (uint8_t*)BKPSRAM_BASE;
-	uint8_t* srmadd_fol_name =  (uint8_t*)(srmadd_fil_name + sizeof(file_name));
-	uint8_t* srmadd_running = (uint8_t*)(srmadd_fol_name + sizeof(folder_name));
-	FATFS fs;
-	FIL fp;
-	JPG_t jpg;
-	int light;
-#endif
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -203,12 +173,6 @@ int main(void)
   else
 	  printf("Recover from reset / standby\n");
 
-  /*if(SD_Init(&hsd, &fs) != HAL_OK)
-	  printf("ERROR: Unable to initialize SD card\n");
-  else
-	  printf("SD Initialized OK!\n");*/
-
-
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -228,25 +192,25 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  displayTask_args.message_queue =  osMessageQueueNew(1, sizeof(DisplayMessage_t), NULL);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of consoleTask */
+  consoleTaskHandle = osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
+
+  /* creation of batteryTask */
+  batteryTaskHandle = osThreadNew(StartBatteryTask, (void*)&state, &batteryTask_attributes);
+
+  /* creation of displayTask */
+  displayTaskHandle = osThreadNew(StartDisplayTask, (void*)&displayTask_args, &displayTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
-  //Battery task (read battery voltage every second)
-  osThreadNew(StartBatteryTask, (void*)&state, &batteryTask_attributes);
-
-  //Display task (update the display when triggered)
-  displayTask_args.message_queue =  osMessageQueueNew(1, sizeof(DisplayMessage_t), NULL);
-  displayTaskHandle = osThreadNew(StartDisplayTask, (void*)&displayTask_args, &displayTask_attributes);
-
-  //Console task (process commands from the serial port)
+  consoleTask_args.huart = &huart3;
+  consoleTask_args.state = &state;
   consoleTask_args.displayTaskId = displayTaskHandle;
   consoleTask_args.display_message_queue = displayTask_args.message_queue;
-  osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -256,119 +220,12 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-#if false
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if(update)
-	{
-		update = false;
-		light = LRD_MeasureLight();
-
-		if(light > 5)
-		{
-			printf("Updating...\n");
-
-			if(SD_Init(&hsd, &fs) == HAL_OK)
-			{
-				bool file_valid;
-
-				//Check for if the file exists
-				file_valid = FMAN_CheckFile(folder_name, file_name);
-
-				if(file_valid == false)
-				{
-					printf("ERROR: Unable to open file: %s/%s\n", folder_name, file_name);
-					printf("Searching for another file\n");
-
-					//Find next valid file
-					file_valid = FMAN_FindNext(folder_name, file_name);
-				}
-
-				//If the file name is valid
-				if(file_valid)
-				{
-					char f_name[(_MAX_LFN+1)*2 + 2];
-					sprintf(f_name, "%s/%s", folder_name, file_name);
-
-					//Initialize display and clear
-					DISP_Init();
-					DISP_Clear(EPD_5IN65F_CLEAN);
-					DISP_BeginUpdate();
-
-					//Open file
-					printf("Loading %s ...\n", f_name);
-					f_open(&fp, f_name, FA_READ | FA_OPEN_EXISTING);
-
-					//Decode image
-					if(JPG_decode(&fp, &jpg))
-					{
-						printf("ERROR: JPG decoding failed\n");
-					}
-
-					//End display update sequence
-					DISP_EndUpdate();
-
-					//Close file
-					f_close(&fp);
-
-					//Search for the next file
-					FMAN_FindNext(folder_name, file_name);
-				}
-				else
-				{
-					printf("ERROR: No valid file found\n");
-				}
-			}
-			else
-			{
-				printf("ERROR: Unable to initialize SD-Card\n");
-			}
-
-			//Disable power
-			SD_Sleep(&hsd);
-			DISP_Sleep();
-
-			printf("Done\n");
-		}
-		else
-		{
-			printf("LOW LIGHT!! LDR = %d\n", light);
-		}
-	}
-
-	//Handle commands from the serial port
-	CMD_TryParse();
-
-	//Enter standby
-	if(running)
-	{
-		//Disable power
-		PWR_Disable(PWR_3V3);
-
-		//Store state into backup ram
-		__HAL_RCC_BKPSRAM_CLK_ENABLE();
-		HAL_PWR_EnableBkUpAccess();
-		HAL_PWREx_EnableBkUpReg();
-		memcpy(srmadd_fil_name, file_name, sizeof(file_name));
-		memcpy(srmadd_fol_name, folder_name, sizeof(folder_name));
-		memcpy(srmadd_running, &running, sizeof(running));
-		__HAL_RCC_BKPSRAM_CLK_DISABLE();
-
-		__HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);
-		__HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
-		__HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&hrtc, RTC_FLAG_WUTF);
-		HAL_PWR_EnterSTANDBYMode();
-	}
-	else
-	{
-		HAL_Delay(100);
-	}
-
   }
-#endif
   /* USER CODE END 3 */
 }
 
@@ -750,17 +607,17 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartConsoleTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the consoleTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartConsoleTask */
+__weak void StartConsoleTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  osThreadExit();	//Terminate thread execution
+
   /* Infinite loop */
   for(;;)
   {
