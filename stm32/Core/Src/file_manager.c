@@ -9,7 +9,8 @@
 
 #include "file_manager.h"
 
-
+static void extract_folder_file(char* folder, char* file, const char* old_path);
+static bool check_file(const char* folder, const char* file);
 static bool check_folder(const char* folder);
 static void increment_file_name(char* file);
 static void find_next_folder(char* folder);
@@ -17,28 +18,15 @@ static void find_first_file(const char* folder, char* file);
 
 
 /*
- * Check if the file exists
- * */
-bool FMAN_CheckFile(const char* folder, const char* file)
-{
-	FRESULT fres;
-	FILINFO fno;
-	char path[(_MAX_LFN+1)*2 + 2];
-
-	sprintf(path, "%s/%s", folder, file);
-
-	fres = f_stat(path, &fno);
-
-	return fres == FR_OK && !(fno.fattrib & AM_DIR);
-}
-
-
-/*
  * Find next file to display
  * */
-bool FMAN_FindNext(char* folder, char* file)
+bool FMAN_FindNext(char* new_path, const char* old_path)
 {
+	char folder[_MAX_LFN+1];
+	char file[_MAX_LFN+1];
 	bool change_folder = true;
+
+	extract_folder_file(folder, file, old_path);
 
 	//Check if the current folder still exists
 	if(check_folder(folder))
@@ -47,7 +35,7 @@ bool FMAN_FindNext(char* folder, char* file)
 		increment_file_name(file);
 
 		//Check if the next file name exists
-		change_folder = !FMAN_CheckFile(folder, file);
+		change_folder = !check_file(folder, file);
 	}
 
 	//Change the current folder to the next available in alphabetical order
@@ -64,7 +52,54 @@ bool FMAN_FindNext(char* folder, char* file)
 		} while(file[0] == '\0' && i++ < 16);
 	}
 
-	return FMAN_CheckFile(folder, file);
+	sprintf(new_path, "%s/%s", folder, file);
+
+	return check_file(folder, file);
+}
+
+
+/*
+ *
+ * */
+static void extract_folder_file(char* folder, char* file, const char* old_path)
+{
+	int i = 0;
+
+	//Extract folder
+	while(old_path[i] != '\0' && old_path[i] != '/' && old_path[i] != '\\')
+	{
+		folder[i] = old_path[i];
+		i++;
+	}
+	folder[i] = '\0';
+
+	int j = i+1;
+	i = 0;
+	//Extract file
+	while(old_path[i] != '\0')
+	{
+		file[i] = old_path[j];
+		i++;
+		j++;
+	}
+	file[i] = '\0';
+}
+
+
+/*
+ * Check if the file exists
+ * */
+static bool check_file(const char* folder, const char* file)
+{
+	FRESULT fres;
+	FILINFO fno;
+	char path[(_MAX_LFN+1)*2 + 2];
+
+	sprintf(path, "%s/%s", folder, file);
+
+	fres = f_stat(path, &fno);
+
+	return fres == FR_OK && !(fno.fattrib & AM_DIR);
 }
 
 

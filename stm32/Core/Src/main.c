@@ -95,6 +95,7 @@ FATFS fs;
 ConsoleTaskArgs_t consoleTask_args;
 DisplayTaskArgs_t displayTask_args;
 
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -172,6 +173,11 @@ int main(void)
 	  printf("Power cycle\n");
   else
 	  printf("Recover from reset / standby\n");
+
+  //Load startup commands
+  const char* cmd_str = "update\n";
+  InitCMDBuffer(cmd_str);
+
 
   /* USER CODE END 2 */
 
@@ -387,7 +393,7 @@ static void MX_RTC_Init(void)
   }
   /** Enable the WakeUp
   */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 60, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 1440, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
   {
     Error_Handler();
   }

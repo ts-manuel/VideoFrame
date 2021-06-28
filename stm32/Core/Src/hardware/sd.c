@@ -10,12 +10,15 @@
 #include <hardware/sd.h>
 
 
+extern SD_HandleTypeDef hsd;
+extern FATFS fs;
+
+
 /*
  * Initialize SD-Card
  * */
-HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs)
+HAL_StatusTypeDef SD_Init(void)
 {
-	HAL_StatusTypeDef sd_res;
 	FRESULT fs_res;
 
 	//Enable power
@@ -23,10 +26,9 @@ HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs)
 	HAL_Delay(100);
 
 	//Initialize SD and Mount drive
-	fs_res = f_mount(fs, "", 1);
+	fs_res = f_mount(&fs, "", 1);
 	if(fs_res != FR_OK)
 	{
-		printf("f_mount error, returned %d\n", fs_res);
 		return HAL_ERROR;
 	}
 
@@ -37,14 +39,14 @@ HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs)
 /*
  * Remove power to the SD-Card
  * */
-HAL_StatusTypeDef SD_Sleep(SD_HandleTypeDef* hsd)
+HAL_StatusTypeDef SD_Sleep(void)
 {
 	//Unmount drive
 	if(f_mount(0, "", 0) != FR_OK)
 		return HAL_ERROR;
 
 	//Power off SD
-	if(HAL_SD_DeInit(hsd) != HAL_OK)
+	if(HAL_SD_DeInit(&hsd) != HAL_OK)
 		return HAL_ERROR;
 
 	//Remove power

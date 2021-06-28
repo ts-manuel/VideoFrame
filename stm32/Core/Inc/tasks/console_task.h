@@ -16,7 +16,9 @@
 #include <string.h>
 #include "stm32f4xx_hal.h"
 #include "settings.h"
+#include "file_manager.h"
 #include "hardware/power.h"
+#include "hardware/sd.h"
 #include "tasks/display_task.h"
 #include "cmsis_os.h"
 #include "EPD_5in65f.h"
@@ -31,6 +33,7 @@ typedef struct
 } ConsoleTaskArgs_t;
 
 
+void InitCMDBuffer(const char* str);
 void StartConsoleTask(void *args);
 
 

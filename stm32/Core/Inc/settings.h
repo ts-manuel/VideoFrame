@@ -25,7 +25,7 @@
  * Number of seconds from the last command after witch
  * the micro enters low power mode
  * */
-#define _SLEEP_TIMEOUT 10000
+#define _SLEEP_TIMEOUT 30
 
 /*
  * Number of retries for SD initialization

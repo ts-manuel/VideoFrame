@@ -14,13 +14,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
-
 #include "fatfs.h"
-#include "sd_driver.h"
-#include "display_driver.h"
-#include "decoder.h"
 
-bool FMAN_CheckFile(const char* folder, const char* file);
-bool FMAN_FindNext(char* folder, char* file);
+
+bool FMAN_FindNext(char* new_path, const char* old_path);
 
 #endif /* INC_FILE_MANAGER_H_ */

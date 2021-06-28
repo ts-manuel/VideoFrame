@@ -8,15 +8,16 @@
  */
 
 #include "tasks/console_task.h"
-#include "hardware/sd.h"
+
 
 //Function prototypes
 static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_lpw);
 static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
 static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args);
-//static void CMD_ParseUpdate(const char* str);
+static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args);
 static void CMD_ParseTaskInfo(const char* str);
+static void CMD_ParseSleep(const char* str, ConsoleTaskArgs_t* args);
 static const char* CMD_Trim(const char* str, const char* msg);
 static const char* CMD_TrimSpaces(const char* str);
 static const char* CMD_ReadColor(const char* str, uint8_t* color);
@@ -26,8 +27,8 @@ static const char* CMD_ReadColor(const char* str, uint8_t* color);
 static USART_TypeDef* uart_instance;
 static volatile char new_char;
 static volatile char buffer[_MAX_CMD_LENGTH];
-static volatile int rx_read_ptr;
-static volatile int rx_write_ptr;
+static volatile int rx_read_ptr = 0;
+static volatile int rx_write_ptr = 0;
 static volatile bool new_char_available = false;
 #define RX_AVAILABLE_DATA() (((unsigned int)(rx_write_ptr - rx_read_ptr)) % _MAX_CMD_LENGTH)
 #define RX_DATA(x) buffer[(rx_read_ptr + (x)) % _MAX_CMD_LENGTH]
@@ -96,6 +97,17 @@ static void ReadStringFromRXBuffer(char* dest, int len)
 
 
 /*
+ * Load RX buffer with commands
+ * */
+void InitCMDBuffer(const char* str)
+{
+	strcpy((char*)buffer, str);
+	rx_write_ptr += strlen(str);
+	new_char_available = true;
+}
+
+
+/*
  *
  * */
 void StartConsoleTask(void *_args)
@@ -105,10 +117,12 @@ void StartConsoleTask(void *_args)
 	bool low_power_timeout_enabled = true;
 
 	//Initialize RX buffer and start UART ISR
-	rx_read_ptr = 0;
-	rx_write_ptr = 0;
 	uart_instance = args->huart->Instance;
 	HAL_UART_Receive_IT(args->huart, (uint8_t*)&new_char, 1);
+
+	//Initialize SD
+	if(SD_Init() != HAL_OK)
+		printf("ERROR: Unable to initialize SD card\n");
 
 	//Parse commands
 	while(1)
@@ -188,7 +202,7 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	}
 	else if((str_args = CMD_Trim(str, "update")))
 	{
-		//CMD_ParseUpdate(str_args, args);
+		CMD_ParseUpdate(str_args, args);
 	}
 	else if((str_args = CMD_Trim(str, "start")))
 	{
@@ -203,6 +217,10 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	else if((str_args = CMD_Trim(str, "task-info")))
 	{
 		CMD_ParseTaskInfo(str_args);
+	}
+	else if((str_args = CMD_Trim(str, "sleep")))
+	{
+		CMD_ParseSleep(str_args, args);
 	}
 	else if(strlen(str) > 0)
 	{
@@ -276,8 +294,7 @@ static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args)
 	printf("Done\n");
 }
 
-extern SD_HandleTypeDef hsd;
-extern FATFS fs;
+
 /*
  * Parse Load command
  * */
@@ -287,16 +304,10 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 	FRESULT fres;
 	FIL file;
 
-	printf("Wait...\n");
+	printf("Loading <%s>\n", str_args);
 
 	if(strlen(str_args) < _MAX_LFN*2+2)
 	{
-		//Initialize SD
-		if(SD_Init(&hsd, &fs) != HAL_OK)
-			printf("ERROR: Unable to initialize SD card\n");
-		else
-			printf("SD Initialized OK!\n");
-
 		//Open file
 		if((fres = f_open(&file, str_args, FA_READ | FA_OPEN_EXISTING)) == FR_OK)
 		{
@@ -308,8 +319,13 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 			osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
 			osThreadYield();
 
+			osDelay(1000);
+
 			//Close file
 			f_close(&file);
+
+			//Copy file path
+			strcpy((char*)args->state->file_path, str_args);
 		}
 		else
 		{
@@ -326,12 +342,24 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 
 
 /*
- * Forces display update cycle
+ * Updates the displayed image
  * */
-/*static void CMD_ParseUpdate(const char* str)
+static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args)
 {
-	update = true;
-}*/
+	char new_file_path[_MAX_LFN*2+2];
+
+	printf("Updating...\n");
+
+	//Find next file
+	if(FMAN_FindNext(new_file_path, (const char*)args->state->file_path))
+	{
+		CMD_ParseLoad(new_file_path, args);
+	}
+	else
+	{
+		printf("ERROR: Unable to find any jpeg file\n");
+	}
+}
 
 
 /*
@@ -360,6 +388,19 @@ static void CMD_ParseTaskInfo(const char* str)
 	}
 }
 
+
+/*
+ * Enter low power mode
+ * */
+static void CMD_ParseSleep(const char* str, ConsoleTaskArgs_t* args)
+{
+	PWR_WriteBacupData(args->state, false);
+
+	printf("Entering low power mode\n");
+	osDelay(1);
+
+	PWR_EnterStandBy();
+}
 
 /*
  * If msg appears at the beginning of the string, remove msg + following spaces

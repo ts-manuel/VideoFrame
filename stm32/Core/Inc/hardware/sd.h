@@ -18,7 +18,7 @@
 #include "settings.h"
 
 
-HAL_StatusTypeDef SD_Init(SD_HandleTypeDef* hsd, FATFS* fs);
-HAL_StatusTypeDef SD_Sleep(SD_HandleTypeDef* hsd);
+HAL_StatusTypeDef SD_Init(void);
+HAL_StatusTypeDef SD_Sleep(void);
 
 #endif /* INC_HARDWARE_SD_H_ */
