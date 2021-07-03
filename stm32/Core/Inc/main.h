@@ -58,6 +58,9 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define BTN_SLEEP_Pin GPIO_PIN_0
+#define BTN_SLEEP_GPIO_Port GPIOC
+#define BTN_SLEEP_EXTI_IRQn EXTI0_IRQn
 #define BAT_ADC_Pin GPIO_PIN_0
 #define BAT_ADC_GPIO_Port GPIOA
 #define EP_DC_Pin GPIO_PIN_4

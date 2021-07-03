@@ -30,6 +30,8 @@ void StartBatteryTask(void *arg)
 
 	while(1)
 	{
+#warning "TODO: Implement low battery detection"
+#if 0
 		//Read battery voltage
 		data->battery_voltage = read_voltage();
 
@@ -45,7 +47,7 @@ void StartBatteryTask(void *arg)
 			//Enter sleep mode
 			PWR_EnterStandBy();
 		}
-
+#endif
 		//Delay 1 second
 		osDelay(1000);
 	}

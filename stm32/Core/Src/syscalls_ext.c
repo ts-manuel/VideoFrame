@@ -8,6 +8,7 @@
  */
 
 #include "stm32f4xx_hal.h"
+#include "usbd_cdc_if.h"
 
 extern UART_HandleTypeDef huart3;
 
@@ -16,6 +17,10 @@ extern UART_HandleTypeDef huart3;
 
 int _write(int fd, char * ptr, int len)
 {
+	//Transmit over USB
+	CDC_Transmit_FS(ptr, len);
+
+	//Transmit over UART
 	HAL_UART_Transmit(&huart3, (uint8_t *) ptr, len, HAL_MAX_DELAY);
 	return len;
 }

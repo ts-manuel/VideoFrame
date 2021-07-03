@@ -21,6 +21,8 @@
 #include "hardware/sd.h"
 #include "tasks/display_task.h"
 #include "cmsis_os.h"
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
 #include "EPD_5in65f.h"
 
 
@@ -30,10 +32,11 @@ typedef struct
 	State_t* state;
 	osThreadId_t displayTaskId;
 	osMessageQueueId_t display_message_queue;
+	volatile bool* sleep_cmd_disabled;
 } ConsoleTaskArgs_t;
 
 
-void InitCMDBuffer(const char* str);
+bool InitCMDBuffer(const char* str);
 void StartConsoleTask(void *args);
 
 

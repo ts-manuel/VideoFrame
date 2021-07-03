@@ -22,6 +22,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "fatfs.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -94,7 +95,7 @@ FATFS fs;
 
 ConsoleTaskArgs_t consoleTask_args;
 DisplayTaskArgs_t displayTask_args;
-
+volatile bool sleep_cmd_disabled = false;
 
 /* USER CODE END PV */
 
@@ -117,6 +118,17 @@ extern void StartDisplayTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/*
+ * Called when an EXTI interrupt is triggered
+ * */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin & BTN_SLEEP_Pin)
+	{
+		sleep_cmd_disabled = true;
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -175,8 +187,9 @@ int main(void)
 	  printf("Recover from reset / standby\n");
 
   //Load startup commands
-  const char* cmd_str = "update\n";
-  InitCMDBuffer(cmd_str);
+  const char* cmd_str = "update\n""sleep\n";
+  if(!InitCMDBuffer(cmd_str))
+	  printf("ERROR: CMD string too long for buffer\n");
 
 
   /* USER CODE END 2 */
@@ -217,6 +230,7 @@ int main(void)
   consoleTask_args.state = &state;
   consoleTask_args.displayTaskId = displayTaskHandle;
   consoleTask_args.display_message_queue = displayTask_args.message_queue;
+  consoleTask_args.sleep_cmd_disabled = &sleep_cmd_disabled;
 
   /* USER CODE END RTOS_THREADS */
 
@@ -546,20 +560,24 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(PWR_SD_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PC13 PC0 PC1 PC2
-                           PC3 PC6 PC7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2
-                          |GPIO_PIN_3|GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pins : PC13 PC1 PC2 PC3
+                           PC6 PC7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_6|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : BTN_SLEEP_Pin */
+  GPIO_InitStruct.Pin = BTN_SLEEP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BTN_SLEEP_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PA1 PA2 PA3 PA4
-                           PA6 PA8 PA9 PA10
-                           PA11 PA12 */
+                           PA6 PA8 PA10 */
   GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12;
+                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -607,6 +625,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DET_GPIO_Port, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -622,6 +644,8 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartConsoleTask */
 __weak void StartConsoleTask(void *argument)
 {
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
 
   /* Infinite loop */

@@ -1,5 +1,5 @@
 # Video Frame
-![diplay](images/display.jpg)
+![demo.gif](images/demo.gif)
 
 
 <!-- TABLE OF CONTENTS -->
@@ -24,16 +24,16 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This is like a  digital picture frame, but instead of showing a sequence of photos, it plays a movie frame by frame. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. The STM32 microcontroller reads from the SD-Card and updates the display at a rate of one frame per minute. The idea is not mine, the first time I saw something similar was on [Hackaday.io](https://hackaday.io/project/175630-slowmovie-cinema-on-a-27-epaper-display). As far as I know, nobody has made something like this with a color ePaper display.
-
-The plan is to make a standalone device that is battery-powered. Hardware is pretty simple, just a microcontroller, SD-Card, and the display.
+This is like a digital picture frame that pays movies at one frame per minute. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. The STM32 microcontroller does the jpeg decoding and updates the display.
+The device is powered by 6 AA batteries.
 
 For more info check out the [full log on hackaday.io](https://hackaday.io/project/177197-the-slowest-video-player-with-7-colors)
 
 <!-- GETTING STARTED -->
 ## Getting Started
 ### Prerequisites
-* [STM32CubeIDE 1.3.0](https://www.st.com/en/development-tools/stm32cubeide.html)
+* [STM32CubeIDE 1.4.0](https://www.st.com/en/development-tools/stm32cubeide.html)
+* [dfu-util](http://dfu-util.sourceforge.net/)
 
 ### Compiling
 * Open STM32CubeIDE
@@ -42,6 +42,12 @@ For more info check out the [full log on hackaday.io](https://hackaday.io/projec
 * Select `General > Existing Project into Workspace` then click next
 * Browse for the folder `stm32` select the project and click finish
 
+### Loading firmware via USB bootloader
+* Connect the USB cable, check that the [correct drivers](https://www.hanselman.com/blog/how-to-fix-dfuutil-stm-winusb-zadig-bootloaders-and-other-firmware-flashing-issues-on-windows) are installed
+* Enter DFU mode by pressing the RESET while holding down the BOOT button
+* Use the following command to flash the firmware
+
+      dfu-util -a0 -s 0x08000000 0 -D "Video Frame.bin"
 
 <!-- GETTING STARTED -->
 ## Circuit Diagram

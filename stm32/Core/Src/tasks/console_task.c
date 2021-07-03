@@ -11,6 +11,7 @@
 
 
 //Function prototypes
+void ConsoleReceive(char* buff, int len, bool from_usb);
 static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_lpw);
 static void CMD_ParseInvalid(const char* str);
 static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
@@ -24,7 +25,8 @@ static const char* CMD_ReadColor(const char* str, uint8_t* color);
 
 
 // Serial RX buffer
-static USART_TypeDef* uart_instance;
+const char bel = '\a';
+static UART_HandleTypeDef* huart_handle;
 static volatile char new_char;
 static volatile char buffer[_MAX_CMD_LENGTH];
 static volatile int rx_read_ptr = 0;
@@ -41,10 +43,25 @@ static volatile bool new_char_available = false;
  * */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart->Instance == uart_instance)
+	if (huart->Instance == huart_handle->Instance)
+	{
+		ConsoleReceive((char*)&new_char, 1, false);
+
+		//Receive next character
+		HAL_UART_Receive_IT(huart, (uint8_t*)&new_char, 1);
+	}
+}
+
+
+/*
+ * Adds received characters to the rx buffer and echoes them back
+ * */
+void ConsoleReceive(char* buff, int len, bool from_usb)
+{
+	for(int i = 0; i < len; i++)
 	{
 		//If character is backspace
-		if(new_char == 127)
+		if(buff[i] == 127)
 		{
 			//Remove last character from buffer
 			if(rx_write_ptr != rx_read_ptr)
@@ -52,32 +69,38 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 				rx_write_ptr = (unsigned int)(rx_write_ptr - 1) % _MAX_CMD_LENGTH;
 
 				//Echo character back
-				HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
+				if(from_usb)
+					CDC_Transmit_FS((uint8_t*)&buff[i], 1);
+				else
+					HAL_UART_Transmit(huart_handle, (uint8_t*)&buff[i], 1, 100);
 			}
 		}
 		//Enter character if buffer is not full
 		else if(RX_AVAILABLE_DATA() < _MAX_CMD_LENGTH-1)
 		{
 			//Insert byte into circular buffer
-			buffer[rx_write_ptr] = new_char;
+			buffer[rx_write_ptr] = buff[i];
 			rx_write_ptr = (rx_write_ptr + 1) % _MAX_CMD_LENGTH;
 
 			//Echo character back
-			HAL_UART_Transmit(huart, (uint8_t*)&new_char, 1, 100);
+			if(from_usb)
+				CDC_Transmit_FS((uint8_t*)&buff[i], 1);
+			else
+				HAL_UART_Transmit(huart_handle, (uint8_t*)&buff[i], 1, 100);
 
 			new_char_available = true;
 		}
 		//Ring the bell when the buffer if full
 		else
 		{
-			char bel = '\a';
-			HAL_UART_Transmit(huart, (uint8_t*)&bel, 1, 100);
+			if(from_usb)
+				CDC_Transmit_FS((uint8_t*)&bel, 1);
+			else
+				HAL_UART_Transmit(huart_handle, (uint8_t*)&bel, 1, 100);
 		}
-
-		//Receive next character
-		HAL_UART_Receive_IT(huart, (uint8_t*)&new_char, 1);
 	}
 }
+
 
 
 /*
@@ -99,11 +122,16 @@ static void ReadStringFromRXBuffer(char* dest, int len)
 /*
  * Load RX buffer with commands
  * */
-void InitCMDBuffer(const char* str)
+bool InitCMDBuffer(const char* str)
 {
+	if(strlen(str) >= _MAX_CMD_LENGTH)
+		return false;
+
 	strcpy((char*)buffer, str);
 	rx_write_ptr += strlen(str);
 	new_char_available = true;
+
+	return true;
 }
 
 
@@ -117,12 +145,16 @@ void StartConsoleTask(void *_args)
 	bool low_power_timeout_enabled = true;
 
 	//Initialize RX buffer and start UART ISR
-	uart_instance = args->huart->Instance;
+	huart_handle = args->huart;
 	HAL_UART_Receive_IT(args->huart, (uint8_t*)&new_char, 1);
+
+	//Initialize USB
+	MX_USB_DEVICE_Init();
 
 	//Initialize SD
 	if(SD_Init() != HAL_OK)
 		printf("ERROR: Unable to initialize SD card\n");
+
 
 	//Parse commands
 	while(1)
@@ -134,8 +166,6 @@ void StartConsoleTask(void *_args)
 		//If there is a new character from the serial port
 		if(new_char_available)
 		{
-			new_char_available = false;
-
 			//Search for '\n' in the receive buffer
 			while(!found && i < RX_AVAILABLE_DATA())
 			{
@@ -162,6 +192,10 @@ void StartConsoleTask(void *_args)
 				//Parse string
 				CMD_ParseString(cmd_str, args, &low_power_timeout_enabled);
 			}
+
+			//Clear flag if all the commands are handled
+			if(RX_AVAILABLE_DATA() == 0)
+				new_char_available = false;
 
 			last_cmd_tick = osKernelGetTickCount();
 		}
@@ -319,10 +353,15 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 			osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
 			osThreadYield();
 
-			osDelay(1000);
-
 			//Close file
-			f_close(&file);
+			int cnt = 0;
+			do{
+				osDelay(1000);
+				fres = f_close(&file);
+			} while(fres != FR_OK && cnt < 10);
+
+			if(cnt >= 10)
+				printf("ERROR: f_close returned %d\n", (int)fres);
 
 			//Copy file path
 			strcpy((char*)args->state->file_path, str_args);
@@ -348,16 +387,23 @@ static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args)
 {
 	char new_file_path[_MAX_LFN*2+2];
 
-	printf("Updating...\n");
-
-	//Find next file
-	if(FMAN_FindNext(new_file_path, (const char*)args->state->file_path))
+	if(!disk_status(0))
 	{
-		CMD_ParseLoad(new_file_path, args);
+		printf("Updating...\n");
+
+		//Find next file
+		if(FMAN_FindNext(new_file_path, (const char*)args->state->file_path))
+		{
+			CMD_ParseLoad(new_file_path, args);
+		}
+		else
+		{
+			printf("ERROR: Unable to find any jpeg file\n");
+		}
 	}
 	else
 	{
-		printf("ERROR: Unable to find any jpeg file\n");
+		printf("ERROR: Drive not mounted\n");
 	}
 }
 
@@ -394,12 +440,17 @@ static void CMD_ParseTaskInfo(const char* str)
  * */
 static void CMD_ParseSleep(const char* str, ConsoleTaskArgs_t* args)
 {
-	PWR_WriteBacupData(args->state, false);
+	if(*args->sleep_cmd_disabled == false)
+	{
+		PWR_WriteBacupData(args->state, false);
 
-	printf("Entering low power mode\n");
-	osDelay(1);
+		printf("Entering low power mode\n");
+		osDelay(1);
 
-	PWR_EnterStandBy();
+		PWR_EnterStandBy();
+	}
+
+	*args->sleep_cmd_disabled = false;
 }
 
 /*
