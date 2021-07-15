@@ -14,9 +14,15 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#compiling">Compiling</a></li>
+        <li><a href="#usb-bootloader">USB Bootloader</a></li>
       </ul>
     </li>
-    <li><a href="#circuit-diagram">Circuit Diagram</a></li>
+    <li><a href="#how-to-operate">How to Operate</a></li>
+      <ul>
+        <li><a href="#circuit-diagram">Circuit Diagram</a></li>
+        <li><a href="#buttons">Buttons</a></li>
+        <li><a href="#configuration-through-usb">Configuration through USB</a></li>
+      </ul>
     <li><a href="#disclaimer">Disclaimer</a></li>
   </ol>
 </details>
@@ -24,10 +30,12 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This is like a digital picture frame that pays movies at one frame per minute. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. The STM32 microcontroller does the jpeg decoding and updates the display.
+This is a digital picture frame that plays movies at one frame per minute. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. An STM32 microcontroller does the jpeg decoding and drives the display.
 The device is powered by 6 AA batteries.
 
+
 For more info check out the [full log on hackaday.io](https://hackaday.io/project/177197-the-slowest-video-player-with-7-colors)
+
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -42,16 +50,32 @@ For more info check out the [full log on hackaday.io](https://hackaday.io/projec
 * Select `General > Existing Project into Workspace` then click next
 * Browse for the folder `stm32` select the project and click finish
 
-### Loading firmware via USB bootloader
+### USB bootloader
 * Connect the USB cable, check that the [correct drivers](https://www.hanselman.com/blog/how-to-fix-dfuutil-stm-winusb-zadig-bootloaders-and-other-firmware-flashing-issues-on-windows) are installed
 * Enter DFU mode by pressing the RESET while holding down the BOOT button
 * Use the following command to flash the firmware
 
       dfu-util -a0 -s 0x08000000 0 -D "Video Frame.bin"
 
-<!-- GETTING STARTED -->
-## Circuit Diagram
+
+<!-- HOW TO OPERATE -->
+## How to Operate
+### Circuit Diagram
 ![Schematic](images/schematic.png)
+
+### Buttons
+* **RESET**: Press during sleep to wake the microcontroller and initiate a display update cycle.
+* **BOOT**: Hold down during reset to enter DFU mode. Press during display update to receive commands from the serial port.
+
+### Configuration through USB
+The USB emulates a serial port that can be used to configure the device. During normal operation, a timer interrupt wakes the microcontroller every 24 minutes to update the display. An update cycle can also be triggered by pressing the **RESET** button. By default, the microcontroller goes back into sleep mode immediately after the display has been updated. By pressing the **BOOT** button while the display is updating, the microcontroller starts listening for commands on the serial port. After 60 seconds of inactivity, the microcontroller goes back to sleep.
+
+The following is a list of commands that can be entered.
+> ***load FOLDER/FILE.jpg*** loads the specified file from the SD card
+
+> ***update*** triggers an update cycle
+
+> ***sleep*** enters sleep mode immediately
 
 
 <!-- DISCLAIMER -->
