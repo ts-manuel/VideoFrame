@@ -31,6 +31,9 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 This is a digital picture frame that plays movies at one frame per minute. Images appear on a [7-Color ePaper display](https://www.waveshare.com/5.65inch-e-paper-module-f.htm). The whole movie is stored as a sequence of jpeg images on an SD-Card. An STM32 microcontroller does the jpeg decoding and drives the display.
+
+e-Paper displays maintain the displayed image without needing any power. The image is updated every 24 minutes and an update cycle takes 18 seconds. Since the device is in sleep mode for the majority of the time, power draw is minimal and the batteries last for a decent amount of time.
+
 The device is powered by 6 AA batteries.
 
 
