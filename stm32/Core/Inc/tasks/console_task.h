@@ -24,7 +24,7 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include "EPD_5in65f.h"
-
+#include "bmp/bmp.h"
 
 typedef struct
 {

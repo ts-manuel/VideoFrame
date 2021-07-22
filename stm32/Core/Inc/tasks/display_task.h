@@ -34,7 +34,8 @@ typedef enum
 	e_DisplayStripes,
 	e_DisplayLines,
 	e_DisplayGradient,
-	e_DisplayJPEG
+	e_DisplayJPEG,
+	e_DisplayBMP
 } DisplayAction_e;
 
 typedef struct
@@ -42,6 +43,7 @@ typedef struct
 	DisplayAction_e action;	//Action to be performed
 	uint8_t color;			//Color to be displayed
 	FIL* fp;				//Jpeg file to be displayed
+	uint8_t* bmp;			//600x448 bitmap
 } DisplayMessage_t;
 
 void StartDisplayTask(void *_args);

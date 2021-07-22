@@ -16,6 +16,7 @@ static void display_stripes(void);
 static void display_lines(void);
 static void display_gradient(uint8_t color);
 static void display_jpeg(FIL* fp);
+static void display_bmp(uint8_t* bmp);
 
 
 /*
@@ -58,6 +59,9 @@ void StartDisplayTask(void *_args)
 					break;
 				case e_DisplayJPEG:
 					display_jpeg(msg.fp);
+					break;
+				case e_DisplayBMP:
+					display_bmp(msg.bmp);
 					break;
 			}
 
@@ -217,3 +221,14 @@ static void display_jpeg(FIL* fp)
 		printf("ERROR: JPG decoding failed\n");
 	}
 }
+
+
+/*
+ * Display 600x448 bitmap
+ * */
+static void display_bmp(uint8_t* bmp)
+{
+	for(int i = 0; i < (EPD_5IN65F_WIDTH * EPD_5IN65F_HEIGHT) / 2; i++)
+		DISP_SendData(bmp[i]);
+}
+

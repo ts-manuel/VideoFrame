@@ -386,6 +386,7 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args)
 {
 	char new_file_path[_MAX_LFN*2+2];
+	bool display_splash_screen = false;
 
 	if(!disk_status(0))
 	{
@@ -399,11 +400,27 @@ static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args)
 		else
 		{
 			printf("ERROR: Unable to find any jpeg file\n");
+			display_splash_screen = true;
 		}
 	}
 	else
 	{
 		printf("ERROR: Drive not mounted\n");
+		display_splash_screen = true;
+	}
+
+
+	//Display bitmap
+	if(display_splash_screen)
+	{
+		DisplayMessage_t msg;
+		msg.action = e_DisplayBMP;
+		msg.bmp = splash_screen;
+
+		//Trigger display task
+		osMessageQueuePut(args->display_message_queue, &msg, 1, 0);
+		osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
+		osThreadYield();
 	}
 }
 
