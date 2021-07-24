@@ -19,17 +19,18 @@
 #include "file_manager.h"
 #include "hardware/power.h"
 #include "hardware/sd.h"
+#include "hardware/flash.h"
 #include "tasks/display_task.h"
 #include "cmsis_os.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include "EPD_5in65f.h"
+#include "bmp/bmp.h"
 
 
 typedef struct
 {
 	UART_HandleTypeDef* huart;
-	State_t* state;
 	osThreadId_t displayTaskId;
 	osMessageQueueId_t display_message_queue;
 	volatile bool* sleep_cmd_disabled;

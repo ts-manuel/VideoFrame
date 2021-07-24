@@ -19,6 +19,7 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args);
 static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args);
 static void CMD_ParseTaskInfo(const char* str);
 static void CMD_ParseSleep(const char* str, ConsoleTaskArgs_t* args);
+static void CMD_ParseFlash(const char* str, ConsoleTaskArgs_t* args);
 static const char* CMD_Trim(const char* str, const char* msg);
 static const char* CMD_TrimSpaces(const char* str);
 static const char* CMD_ReadColor(const char* str, uint8_t* color);
@@ -155,7 +156,6 @@ void StartConsoleTask(void *_args)
 	if(SD_Init() != HAL_OK)
 		printf("ERROR: Unable to initialize SD card\n");
 
-
 	//Parse commands
 	while(1)
 	{
@@ -204,11 +204,8 @@ void StartConsoleTask(void *_args)
 		uint32_t tick = osKernelGetTickCount();
 		if((tick - last_cmd_tick) / osKernelGetTickFreq() > _SLEEP_TIMEOUT && low_power_timeout_enabled)
 		{
-			PWR_WriteBacupData(args->state, false);
-
 			printf("Entering low power mode\n");
 			osDelay(1);
-
 			PWR_EnterStandBy();
 		}
 	}
@@ -255,6 +252,10 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	else if((str_args = CMD_Trim(str, "sleep")))
 	{
 		CMD_ParseSleep(str_args, args);
+	}
+	else if((str_args = CMD_Trim(str, "flash")))
+	{
+		CMD_ParseFlash(str_args, args);
 	}
 	else if(strlen(str) > 0)
 	{
@@ -363,8 +364,8 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
 			if(cnt >= 10)
 				printf("ERROR: f_close returned %d\n", (int)fres);
 
-			//Copy file path
-			strcpy((char*)args->state->file_path, str_args);
+			//Store file path to flash
+			FLASH_StoreFilePath(str_args);
 		}
 		else
 		{
@@ -385,25 +386,47 @@ static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args)
  * */
 static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args)
 {
-	char new_file_path[_MAX_LFN*2+2];
+	char curr_file_path[_FILE_PATH_MAX_LEN];
+	char next_file_path[_FILE_PATH_MAX_LEN];
+	bool display_splash_screen = false;
 
 	if(!disk_status(0))
 	{
 		printf("Updating...\n");
 
+		//Load current file path from flash
+		FLASH_LoadFilePath(curr_file_path);
+
 		//Find next file
-		if(FMAN_FindNext(new_file_path, (const char*)args->state->file_path))
+		if(FMAN_FindNext(next_file_path, curr_file_path))
 		{
-			CMD_ParseLoad(new_file_path, args);
+			//Display new file
+			CMD_ParseLoad(next_file_path, args);
 		}
 		else
 		{
 			printf("ERROR: Unable to find any jpeg file\n");
+			display_splash_screen = true;
 		}
 	}
 	else
 	{
 		printf("ERROR: Drive not mounted\n");
+		display_splash_screen = true;
+	}
+
+
+	//Display bitmap
+	if(display_splash_screen)
+	{
+		DisplayMessage_t msg;
+		msg.action = e_DisplayBMP;
+		msg.bmp = (uint8_t*)splash_screen;
+
+		//Trigger display task
+		osMessageQueuePut(args->display_message_queue, &msg, 1, 0);
+		osThreadFlagsSet(args->displayTaskId, _FLAG_DISPLAY_UPDATE);
+		osThreadYield();
 	}
 }
 
@@ -442,16 +465,73 @@ static void CMD_ParseSleep(const char* str, ConsoleTaskArgs_t* args)
 {
 	if(*args->sleep_cmd_disabled == false)
 	{
-		PWR_WriteBacupData(args->state, false);
-
 		printf("Entering low power mode\n");
 		osDelay(1);
-
 		PWR_EnterStandBy();
 	}
-
-	*args->sleep_cmd_disabled = false;
+	else
+	{
+		*args->sleep_cmd_disabled = false;
+	}
 }
+
+
+/*
+ * FLASH commands (erase and print content)
+ * */
+static void CMD_ParseFlash(const char* str, ConsoleTaskArgs_t* args)
+{
+	const char* ss_str;
+	const int flash_add_min = 0;
+	const int flash_add_max = 131072;
+	char path[_FILE_PATH_MAX_LEN];
+
+	if(strcmp(str, "erase") == 0)
+	{
+		printf("Erasing flash...\n");
+		FLASH_Erase();
+		printf("Done\n");
+	}
+	else if((ss_str = CMD_Trim(str, "dump")))
+	{
+		int strt_add = flash_add_min;
+		int stop_add = flash_add_max;
+
+		//Read start and stop addresses
+		sscanf(ss_str, "%d %d", &strt_add, &stop_add);
+
+		//Print flash content
+		char* pt = (char*)0x080e0000;
+		for(int i = strt_add; i < stop_add; i += 16)
+		{
+			printf("%05X: ", i);
+
+			for(int j = 0; j < 16; j++)
+				printf("%02X ", pt[j]);
+
+			printf("  ");
+
+			for(int j = 0; j < 16; j++)
+			{
+				if(isgraph((int)pt[j]))
+					printf("%c", pt[j]);
+				else
+					printf(".");
+			}
+
+			printf("\n");
+
+			pt += 16;
+		}
+	}
+	else
+	{
+		//Print last valid entry
+		bool valid = FLASH_LoadFilePath(path);
+		printf("FLASH_Load() returned: %d, path: <%s>\n", valid, path);
+	}
+}
+
 
 /*
  * If msg appears at the beginning of the string, remove msg + following spaces
