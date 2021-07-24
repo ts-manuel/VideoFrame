@@ -27,5 +27,9 @@
  * */
 #define _SLEEP_TIMEOUT 60
 
+/*
+ * DO NOT max length of file path buffer
+ * */
+#define _FILE_PATH_MAX_LEN (8+1+8+1+3+1)
 
 #endif /* INC_SETTINGS_H_ */

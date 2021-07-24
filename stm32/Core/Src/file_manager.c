@@ -227,7 +227,7 @@ static void find_first_file(const char* folder, char* file)
 	int digit_count = 0;
 	for(uint8_t i = len - 1; i < len; i--)
 	{
-		if(isdigit(file[i]))
+		if(isdigit((int)file[i]))
 		{
 			file[i] = '0';
 			digit_count ++;

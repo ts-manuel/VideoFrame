@@ -35,7 +35,6 @@
 
 #include "hardware/power.h"
 #include "hardware/sd.h"
-#include "tasks/battery_task.h"
 #include "tasks/console_task.h"
 #include "tasks/display_task.h"
 /* USER CODE END Includes */
@@ -55,8 +54,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-
 RTC_HandleTypeDef hrtc;
 
 SD_HandleTypeDef hsd;
@@ -74,13 +71,6 @@ const osThreadAttr_t consoleTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 1024 * 4
 };
-/* Definitions for batteryTask */
-osThreadId_t batteryTaskHandle;
-const osThreadAttr_t batteryTask_attributes = {
-  .name = "batteryTask",
-  .priority = (osPriority_t) osPriorityHigh,
-  .stack_size = 128 * 4
-};
 /* Definitions for displayTask */
 osThreadId_t displayTaskHandle;
 const osThreadAttr_t displayTask_attributes = {
@@ -90,9 +80,7 @@ const osThreadAttr_t displayTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 
-State_t state;
 FATFS fs;
-
 ConsoleTaskArgs_t consoleTask_args;
 DisplayTaskArgs_t displayTask_args;
 volatile bool sleep_cmd_disabled = false;
@@ -107,9 +95,7 @@ static void MX_RTC_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SDIO_SD_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_ADC1_Init(void);
 void StartConsoleTask(void *argument);
-extern void StartBatteryTask(void *argument);
 extern void StartDisplayTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -171,20 +157,12 @@ int main(void)
   MX_FATFS_Init();
   MX_SDIO_SD_Init();
   MX_USART3_UART_Init();
-  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
   //Enable power
+  printf("Enabling power\n");
   PWR_Enable(PWR_3V3);
   HAL_Delay(100);
-
-  //Backup previous state
-  PWR_ReadBackupData(&state);
-
-  if(state.power_cycle)
-	  printf("Power cycle\n");
-  else
-	  printf("Recover from reset / standby\n");
 
   //Load startup commands
   const char* cmd_str = "update\n""sleep\n";
@@ -218,16 +196,12 @@ int main(void)
   /* creation of consoleTask */
   consoleTaskHandle = osThreadNew(StartConsoleTask, (void*)&consoleTask_args, &consoleTask_attributes);
 
-  /* creation of batteryTask */
-  batteryTaskHandle = osThreadNew(StartBatteryTask, (void*)&state, &batteryTask_attributes);
-
   /* creation of displayTask */
   displayTaskHandle = osThreadNew(StartDisplayTask, (void*)&displayTask_args, &displayTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 
   consoleTask_args.huart = &huart3;
-  consoleTask_args.state = &state;
   consoleTask_args.displayTaskId = displayTaskHandle;
   consoleTask_args.display_message_queue = displayTask_args.message_queue;
   consoleTask_args.sleep_cmd_disabled = &sleep_cmd_disabled;
@@ -297,56 +271,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC1_Init(void)
-{
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
-  hadc1.Init.Resolution = ADC_RESOLUTION_8B;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
@@ -574,10 +498,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BTN_SLEEP_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA2 PA3 PA4
-                           PA6 PA8 PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_10;
+  /*Configure GPIO pins : BAT_ADC_Pin PA1 PA2 PA3
+                           PA4 PA6 PA8 PA10 */
+  GPIO_InitStruct.Pin = BAT_ADC_Pin|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);

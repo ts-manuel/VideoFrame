@@ -18,7 +18,7 @@ extern UART_HandleTypeDef huart3;
 int _write(int fd, char * ptr, int len)
 {
 	//Transmit over USB
-	CDC_Transmit_FS(ptr, len);
+	CDC_Transmit_FS((uint8_t*)ptr, (uint16_t)len);
 
 	//Transmit over UART
 	HAL_UART_Transmit(&huart3, (uint8_t *) ptr, len, HAL_MAX_DELAY);

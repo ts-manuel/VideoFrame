@@ -283,7 +283,7 @@ static uint8_t read_byte(JPG_t* jpg, FIL* fp)
 {
 	if(jpg->ptr >= 512)
 	{
-		f_read(fp, (void*)jpg->buff, 512, jpg->size);
+		f_read(fp, (void*)jpg->buff, 512, &jpg->size);
 		jpg->ptr = 0;
 	}
 
