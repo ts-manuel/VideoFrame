@@ -28,6 +28,7 @@ bool FMAN_FindNext(char* new_path, const char* old_path)
 
 	extract_folder_file(folder, file, old_path);
 
+
 	//Check if the current folder still exists
 	if(check_folder(folder))
 	{
@@ -204,58 +205,28 @@ static void find_first_file(const char* folder, char* file)
 {
 	FILINFO fno;
 	DIR dp;
-	bool error = false;
+
+	strcpy(file, "");
 
 	//Open directory
 	if(f_opendir(&dp, folder) != FR_OK)
 	{
-		error |= true;
+		return;
 	}
 
-	//Read first entry
-	if(f_readdir(&dp, &fno) != FR_OK)
-	{
-		error |= true;
-	}
+	printf("Opening DIR: %s\n", folder);
 
-	//Copy file name
-	strcpy(file, fno.fname);
-
-	//Set all digits to 0
-	int len = strlen(file);
-	bool ext = true;
-	int digit_count = 0;
-	for(uint8_t i = len - 1; i < len; i--)
+	//Go through all the entries in the directory
+	while(f_readdir(&dp, &fno) == FR_OK)
 	{
-		if(isdigit((int)file[i]))
+		//When all directory entries have been read f_read returns a null string
+		if(fno.fname[0] == '\0')
+			break;
+
+		//Check if new file name comes first
+		if(strlen(file) ==  0 || strcmp(fno.fname, file) < 0)
 		{
-			file[i] = '0';
-			digit_count ++;
+			strcpy(file, fno.fname);
 		}
-		else
-		{
-			if(ext && file[i] == '.')
-			{
-				ext = false;
-			}
-			else if(!ext)
-			{
-				error |= true;
-			}
-		}
-	}
-
-	if(digit_count == 0)
-	{
-		error |= true;
-	}
-
-	//Close directory
-	f_closedir(&dp);
-
-	//Return empty string if no file is found
-	if(error)
-	{
-		strcpy(file, "");
 	}
 }
