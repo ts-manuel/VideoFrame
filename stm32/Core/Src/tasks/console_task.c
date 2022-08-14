@@ -14,6 +14,7 @@
 void ConsoleReceive(char* buff, int len, bool from_usb);
 static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_lpw);
 static void CMD_ParseInvalid(const char* str);
+static void CMD_ParseHelp(const char* str);
 static void CMD_ParseDisplay(const char* str, ConsoleTaskArgs_t* args);
 static void CMD_ParseLoad(const char* str_args, ConsoleTaskArgs_t* args);
 static void CMD_ParseUpdate(const char* str, ConsoleTaskArgs_t* args);
@@ -156,6 +157,7 @@ void StartConsoleTask(void *_args)
 	if(SD_Init() != HAL_OK)
 		printf("ERROR: Unable to initialize SD card\n");
 
+
 	//Parse commands
 	while(1)
 	{
@@ -193,9 +195,8 @@ void StartConsoleTask(void *_args)
 				CMD_ParseString(cmd_str, args, &low_power_timeout_enabled);
 			}
 
-			//Clear flag if all the commands are handled
-			if(RX_AVAILABLE_DATA() == 0)
-				new_char_available = false;
+			//Clear flag after handling the character
+			new_char_available = false;
 
 			last_cmd_tick = osKernelGetTickCount();
 		}
@@ -223,7 +224,11 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 	str = CMD_TrimSpaces(str);
 
 	//Try to match a command
-	if((str_args = CMD_Trim(str, "display")))
+	if((str_args = CMD_Trim(str, "help")))
+	{
+		CMD_ParseHelp(str_args);
+	}
+	else if((str_args = CMD_Trim(str, "display")))
 	{
 		CMD_ParseDisplay(str_args, args);
 	}
@@ -271,6 +276,123 @@ static void CMD_ParseString(const char* str, ConsoleTaskArgs_t* args, bool* en_l
 static void CMD_ParseInvalid(const char* str)
 {
 	printf("Invalid command: -%s-\n", str);
+}
+
+
+/*
+ * Parse help command
+ * print a list of all commands
+ * */
+static void CMD_ParseHelp(const char* str)
+{
+
+	if(CMD_Trim(str, "start"))
+	{
+		printf(
+			"\n"
+			"usage: start \n"
+			"Start low power timer, after %d seconds the system enters low power mode, the serial communication is terminated. \n",
+			_SLEEP_TIMEOUT
+		);
+	}
+	else if(CMD_Trim(str, "stop"))
+	{
+		printf(
+			"\n"
+			"usage: stop \n"
+			"Stop low power timer. \n"
+			"The system remains operational until the low power timer is started with the start command or the sleep command is executed. \n"
+		);
+	}
+	else if(CMD_Trim(str, "sleep"))
+	{
+		printf(
+			"\n"
+			"usage: sleep \n"
+			"Enter low power mode immediately if not disabled. \n"
+			"The sleep command can be disabled by pressing the BOOT while the system is running. \n"
+			"Running the command enables itself, if executed 2 times, the second time it will work. \n"
+		);
+	}
+	else if(CMD_Trim(str, "display"))
+	{
+		printf(
+			"\n"
+			"usage: display [color] \n"
+			"usage: display [pattern] \n"
+			"usage: display [pattern] [color]\n"
+			"If only the color is specified, the screen is filled solid with that color. \n"
+			"\n"
+			"  Available colors: \n"
+			"    black \n"
+			"    white \n"
+			"    green \n"
+			"    blue \n"
+			"    red \n"
+			"    yellow \n"
+			"    orange \n"
+			"    clean \n"
+			"\n"
+			"  Test patterns:\n"
+			"    grad:      [color] Draws a gradient with a specific color. \n"
+			"    stripes:           Draws horizontal stripes whit all the colors. \n"
+			"    lines:             Draws horizontal alternating black and white lines. \n"
+			"    blocks:            Draws 8 rectanguar blocks, one for each color. \n"
+		);
+	}
+	else if(CMD_Trim(str, "load"))
+	{
+		printf(
+			"\n"
+			"usage: load [path] \n"
+			"Load image from SD card. \n"
+		);
+	}
+	else if(CMD_Trim(str, "update"))
+	{
+		printf(
+			"\n"
+			"usage: update \n"
+			"Load next image from SD card. \n"
+		);
+	}
+	else if(CMD_Trim(str, "task-info"))
+	{
+		printf(
+			"\n"
+			"usage: task-info \n"
+			"Print running tasks. \n"
+		);
+	}
+	else if(CMD_Trim(str, "flash"))
+	{
+		printf(
+				"\n"
+			"usage: falsh erase \n"
+			"usage: falsh dump [start] [stop] \n"
+			"Commands: \n"
+			"  erase: Erases the entire flash memory. \n"
+			"  dump:  Prints the flash content. start and stop are decimal addresses. \n"
+		);
+	}
+	else
+	{
+		printf(
+			"usage: help [command]  \n"
+			"To get help about a specific command. \n"
+			"\n"
+			"LIST OF COMMANDS \n"
+			"  start:               Start low power timer, %d seconds timeout. \n"
+			"  stop:                Stop low power timer, no timeout. \n"
+			"  sleep:               Enter low power mode immediately if not disabled. \n"
+			"  display: [pattern]   Display test pattern. \n"
+			"  load:    [path]      Load image from SD card. \n"
+			"  update:              Load next image from SD card. \n"
+			"  task-info:           Print running tasks. \n"
+			"  flash:   [action]    Read / Write internal flash. \n",
+			_SLEEP_TIMEOUT
+		);
+	}
 }
 
 
@@ -452,7 +574,7 @@ static void CMD_ParseTaskInfo(const char* str)
 		uint32_t stack_space = osThreadGetStackSpace(id);
 		const char* state = state_to_str[osThreadGetState(id)];
 
-		printf("%d Thread <%s>, Priority: %d, Stack Space: %ldWords, State: %s\n",
+		printf("%d Thread <%20s>, Priority: %2d, Stack Space: %4ld Words, State: %s\n",
 				i, name, (int)priority, stack_space, state);
 	}
 }
