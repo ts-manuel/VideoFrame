@@ -36,38 +36,45 @@ void StartDisplayTask(void *_args)
 		if(osMessageQueueGet (args->message_queue, &msg, NULL, 100) == osOK)
 		{
 
-			//Initialize display
-			DISP_Init();
-			DISP_BeginUpdate();
-
-			switch(msg.action)
+			if(LDR_IsDark() == false)
 			{
-				case e_DisplaySolid:
-					display_solid(msg.color);
-					break;
-				case e_DisplayBlocks:
-					display_bloks();
-					break;
-				case e_DisplayStripes:
-					display_stripes();
-					break;
-				case e_DisplayLines:
-					display_lines();
-					break;
-				case e_DisplayGradient:
-					display_gradient(msg.color);
-					break;
-				case e_DisplayJPEG:
-					display_jpeg(msg.fp);
-					break;
-				case e_DisplayBMP:
-					display_bmp(msg.bmp);
-					break;
-			}
+				//Initialize display
+				DISP_Init();
+				DISP_BeginUpdate();
 
-			//Update display and enter low power mode
-			DISP_EndUpdate();
-			DISP_Sleep();
+				switch(msg.action)
+				{
+					case e_DisplaySolid:
+						display_solid(msg.color);
+						break;
+					case e_DisplayBlocks:
+						display_bloks();
+						break;
+					case e_DisplayStripes:
+						display_stripes();
+						break;
+					case e_DisplayLines:
+						display_lines();
+						break;
+					case e_DisplayGradient:
+						display_gradient(msg.color);
+						break;
+					case e_DisplayJPEG:
+						display_jpeg(msg.fp);
+						break;
+					case e_DisplayBMP:
+						display_bmp(msg.bmp);
+						break;
+				}
+
+				//Update display and enter low power mode
+				DISP_EndUpdate();
+				DISP_Sleep();
+			}
+			else
+			{
+				printf("DisplayTask: Too dark to see the display, update aborted\n");
+			}
 		}
 		else
 		{

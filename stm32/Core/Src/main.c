@@ -164,11 +164,17 @@ int main(void)
   PWR_Enable(PWR_3V3);
   HAL_Delay(100);
 
+  //Flash LED0 on startup
+  for(int i = 0; i < 4; i++)
+  {
+	HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
+  	HAL_Delay(250);
+  }
+
   //Load startup commands
   const char* cmd_str = "update\n""sleep\n";
   if(!InitCMDBuffer(cmd_str))
 	  printf("ERROR: CMD string too long for buffer\n");
-
 
   /* USER CODE END 2 */
 
@@ -479,10 +485,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, EP_DC_Pin|EP_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, EP_RST_Pin|PWR_3V3_EN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, EP_RST_Pin|PWR_3V3_EN_Pin|LDR_SIG_Pin|LDR_GND_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(PWR_SD_EN_GPIO_Port, PWR_SD_EN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LED0_Pin|PWR_SD_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PC13 PC1 PC2 PC3
                            PC6 PC7 */
@@ -499,9 +505,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(BTN_SLEEP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : BAT_ADC_Pin PA1 PA2 PA3
-                           PA4 PA6 PA8 PA10 */
+                           PA4 PA6 PA8 */
   GPIO_InitStruct.Pin = BAT_ADC_Pin|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_10;
+                          |GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -513,8 +519,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EP_RST_Pin PWR_3V3_EN_Pin */
-  GPIO_InitStruct.Pin = EP_RST_Pin|PWR_3V3_EN_Pin;
+  /*Configure GPIO pins : EP_RST_Pin PWR_3V3_EN_Pin LDR_GND_Pin */
+  GPIO_InitStruct.Pin = EP_RST_Pin|PWR_3V3_EN_Pin|LDR_GND_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -527,27 +533,32 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(EP_BUSY_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB2 PB13 PB14 PB15
-                           PB5 PB6 PB7 PB8
-                           PB9 */
+                           PB5 PB6 PB7 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8
-                          |GPIO_PIN_9;
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PWR_SD_EN_Pin */
-  GPIO_InitStruct.Pin = PWR_SD_EN_Pin;
+  /*Configure GPIO pins : LED0_Pin PWR_SD_EN_Pin */
+  GPIO_InitStruct.Pin = LED0_Pin|PWR_SD_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(PWR_SD_EN_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SD_DET_Pin */
   GPIO_InitStruct.Pin = SD_DET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SD_DET_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LDR_SIG_Pin */
+  GPIO_InitStruct.Pin = LDR_SIG_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LDR_SIG_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);

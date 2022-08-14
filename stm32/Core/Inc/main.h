@@ -77,6 +77,8 @@ void Error_Handler(void);
 #define SD_D0_GPIO_Port GPIOC
 #define SD_D1_Pin GPIO_PIN_9
 #define SD_D1_GPIO_Port GPIOC
+#define LED0_Pin GPIO_PIN_10
+#define LED0_GPIO_Port GPIOA
 #define PWR_SD_EN_Pin GPIO_PIN_15
 #define PWR_SD_EN_GPIO_Port GPIOA
 #define SD_D2_Pin GPIO_PIN_10
@@ -89,6 +91,10 @@ void Error_Handler(void);
 #define SD_CMD_GPIO_Port GPIOD
 #define SD_DET_Pin GPIO_PIN_4
 #define SD_DET_GPIO_Port GPIOB
+#define LDR_SIG_Pin GPIO_PIN_8
+#define LDR_SIG_GPIO_Port GPIOB
+#define LDR_GND_Pin GPIO_PIN_9
+#define LDR_GND_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
