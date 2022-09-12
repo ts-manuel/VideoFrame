@@ -195,8 +195,9 @@ void StartConsoleTask(void *_args)
 				CMD_ParseString(cmd_str, args, &low_power_timeout_enabled);
 			}
 
-			//Clear flag after handling the character
-			new_char_available = false;
+			//Clear flag after handling the character and if there are no more commands pending
+			if(RX_AVAILABLE_DATA() == 0)
+				new_char_available = false;
 
 			last_cmd_tick = osKernelGetTickCount();
 		}
